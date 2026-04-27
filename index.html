@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Klarraum</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="ambient ambient-left"></div>
+    <div class="ambient ambient-right"></div>
+
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">ADHS-freundliche Priorisierung</p>
+        <h1>Klarraum</h1>
+        <p class="intro">
+          Eine kleine Tagessteuerung für Momente, in denen zu viele Aufgaben,
+          Ideen und offene Schleifen gleichzeitig im Kopf sind.
+        </p>
+        <div class="hero-points">
+          <span>Gedanken entladen</span>
+          <span>Top-3 wählen lassen</span>
+          <span>Mit Mini-Schritten starten</span>
+        </div>
+      </div>
+
+      <section class="status-panel">
+        <div class="panel-head">
+          <div>
+            <p class="step">Tageskontext</p>
+            <h2>Wie sieht dein Tag gerade aus?</h2>
+          </div>
+          <button id="resetDayButton" class="ghost-button" type="button">
+            Tag zurücksetzen
+          </button>
+        </div>
+        <p>
+          Diese Angaben beeinflussen die Priorisierung. Die App soll nur Dinge
+          nach oben holen, die heute wirklich machbar sind.
+        </p>
+        <div class="status-grid">
+          <label>
+            Energie
+            <select id="energyLevel">
+              <option value="1">Niedrig</option>
+              <option value="2" selected>Mittel</option>
+              <option value="3">Hoch</option>
+            </select>
+          </label>
+          <label>
+            Fokus
+            <select id="focusState">
+              <option value="1">Zerstreut</option>
+              <option value="2" selected>Okay</option>
+              <option value="3">Klar</option>
+            </select>
+          </label>
+          <label>
+            Verfügbare Zeit
+            <select id="timeWindow">
+              <option value="20">20 Min</option>
+              <option value="45" selected>45 Min</option>
+              <option value="90">90 Min</option>
+              <option value="180">3 Std</option>
+            </select>
+          </label>
+          <label>
+            Modus
+            <select id="dayMode">
+              <option value="stabil" selected>Stabiler Tag</option>
+              <option value="chaos">Überforderter Tag</option>
+              <option value="catchup">Aufholen</option>
+            </select>
+          </label>
+        </div>
+      </section>
+    </header>
+
+    <main class="layout">
+      <section class="card input-card">
+        <div class="card-head">
+          <p class="step">1. Kopf leeren</p>
+          <h2>Inbox für Aufgaben und Ideen</h2>
+        </div>
+        <p class="card-copy">
+          Schreib es erst raus. Die Sortierung kommt danach.
+        </p>
+
+        <form id="taskForm" class="task-form">
+          <label>
+            Was beschäftigt dich gerade?
+            <textarea
+              id="taskTitle"
+              name="title"
+              rows="3"
+              placeholder="z. B. Offerte fertig machen, Mutter zurückrufen, neue Produktidee kurz festhalten"
+              required
+            ></textarea>
+          </label>
+
+          <div class="form-grid">
+            <label>
+              Bereich
+              <select id="taskDomain" name="domain">
+                <option value="Arbeit">Arbeit</option>
+                <option value="Privat">Privat</option>
+                <option value="Idee">Idee</option>
+              </select>
+            </label>
+            <label>
+              Typ
+              <select id="taskType" name="type">
+                <option value="task">Aufgabe</option>
+                <option value="idea">Idee</option>
+                <option value="worry">Offene Schleife</option>
+              </select>
+            </label>
+            <label>
+              Wichtigkeit
+              <select id="taskImpact" name="impact">
+                <option value="1">Niedrig</option>
+                <option value="2" selected>Mittel</option>
+                <option value="3">Hoch</option>
+              </select>
+            </label>
+            <label>
+              Dringlichkeit
+              <select id="taskUrgency" name="urgency">
+                <option value="1">Später</option>
+                <option value="2" selected>Bald</option>
+                <option value="3">Heute</option>
+              </select>
+            </label>
+            <label>
+              Aufwand
+              <select id="taskEffort" name="effort">
+                <option value="10">10 Min</option>
+                <option value="15">15 Min</option>
+                <option value="30" selected>30 Min</option>
+                <option value="60">1 Std</option>
+                <option value="120">2 Std</option>
+              </select>
+            </label>
+            <label>
+              Start-Hürde
+              <select id="taskFriction" name="friction">
+                <option value="1">Leicht</option>
+                <option value="2" selected>Mittel</option>
+                <option value="3">Blockierend</option>
+              </select>
+            </label>
+          </div>
+
+          <label>
+            Nächster Mini-Schritt
+            <input
+              id="taskNextStep"
+              name="nextStep"
+              type="text"
+              placeholder="z. B. Mail öffnen und Betreff schreiben"
+            />
+          </label>
+
+          <button type="submit">In Klarraum übernehmen</button>
+        </form>
+      </section>
+
+      <section class="card summary-card">
+        <div class="card-head">
+          <p class="step">2. Überblick</p>
+          <h2>Was heute los ist</h2>
+        </div>
+        <div class="summary-grid" id="summaryGrid"></div>
+        <div class="support-note" id="supportNote"></div>
+      </section>
+
+      <section class="card focus-card">
+        <div class="card-head">
+          <p class="step">3. Heute zählt nur das</p>
+          <h2>Deine fokussierten 3</h2>
+        </div>
+        <div id="topThree" class="top-three"></div>
+      </section>
+
+      <section class="card starter-card">
+        <div class="card-head">
+          <p class="step">4. Einstieg</p>
+          <h2>Nächster machbarer Schritt</h2>
+        </div>
+        <div id="focusAction" class="focus-action"></div>
+      </section>
+
+      <section class="card queue-card">
+        <div class="card-head">
+          <p class="step">5. Aufgabenliste</p>
+          <h2>Aktive Aufgaben</h2>
+        </div>
+        <div class="toolbar">
+          <div class="filter-pills">
+            <button class="filter-button active" data-filter="all" type="button">
+              Alle
+            </button>
+            <button class="filter-button" data-filter="Arbeit" type="button">
+              Arbeit
+            </button>
+            <button class="filter-button" data-filter="Privat" type="button">
+              Privat
+            </button>
+            <button class="filter-button" data-filter="Idee" type="button">
+              Ideen
+            </button>
+          </div>
+        </div>
+        <div id="taskList" class="task-list"></div>
+      </section>
+
+      <section class="card parking-card">
+        <div class="card-head">
+          <p class="step">6. Entlastung</p>
+          <h2>Geparkte Ideen und erledigte Dinge</h2>
+        </div>
+        <div class="parking-layout">
+          <div>
+            <h3>Ideen-Parkplatz</h3>
+            <div id="ideaList" class="stack-list"></div>
+          </div>
+          <div>
+            <h3>Erledigt heute</h3>
+            <div id="doneList" class="stack-list"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <section class="principles">
+      <div class="principle">
+        <h3>Weniger Entscheidungen</h3>
+        <p>Die App sortiert vor, damit du nicht dauernd neu priorisieren musst.</p>
+      </div>
+      <div class="principle">
+        <h3>Gute Ideen bleiben sicher</h3>
+        <p>Ideen werden nicht vergessen, aber sie dominieren auch nicht deinen Tag.</p>
+      </div>
+      <div class="principle">
+        <h3>Starten statt perfekt planen</h3>
+        <p>Jede Aufgabe bekommt einen Mini-Schritt, damit der Einstieg kleiner wird.</p>
+      </div>
+    </section>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
