@@ -424,6 +424,7 @@ textarea { min-height: 92px; resize: vertical; }
 .action-park { background: var(--park); }
 .action-edit { background: var(--edit); }
 .action-activate { background: var(--primary); }
+.action-delete { background: #b91c1c; }
 
 .task-actions {
   margin-left: auto;

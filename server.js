@@ -146,6 +146,17 @@ app.patch("/api/tasks/:id", requireAuth, (req, res) => {
   res.json({ task: getTaskById(req.user.id, taskId) });
 });
 
+app.delete("/api/tasks/:id", requireAuth, (req, res) => {
+  const taskId = Number(req.params.id);
+  const existing = getTaskById(req.user.id, taskId);
+  if (!existing) {
+    return res.status(404).json({ error: "task_not_found" });
+  }
+
+  db.prepare("DELETE FROM tasks WHERE id = ? AND user_id = ?").run(taskId, req.user.id);
+  res.status(204).end();
+});
+
 const server = app.listen(PORT, () => {
   console.log(`Mindfog listening on http://localhost:${PORT}`);
 });

@@ -83,6 +83,8 @@ const translations = {
     doneOn: "Erledigt",
     reactivateButton: "Aktivieren",
     statusEdit: "Bearbeiten",
+    deleteButton: "Löschen",
+    deleteConfirm: "Dieser Task wird unwiderruflich gelöscht. Fortfahren?",
     editTitle: "Task bearbeiten",
     authTitle: "Bei Mindfog anmelden",
     authIntro: "Melde dich an, damit deine Tasks sicher gespeichert und auf allen Geräten verfügbar sind.",
@@ -174,6 +176,8 @@ const translations = {
     doneOn: "Completed",
     reactivateButton: "Activate",
     statusEdit: "Edit",
+    deleteButton: "Delete",
+    deleteConfirm: "This task will be deleted permanently. Continue?",
     editTitle: "Edit task",
     authTitle: "Sign in to Mindfog",
     authIntro: "Sign in so your tasks are stored securely and available across devices.",
@@ -601,6 +605,14 @@ async function patchTask(id, payload) {
   render();
 }
 
+async function deleteTask(id) {
+  await api(`/api/tasks/${id}`, {
+    method: "DELETE",
+  });
+  appState.tasks = appState.tasks.filter((task) => task.id !== id);
+  render();
+}
+
 async function addTask(event) {
   event.preventDefault();
   const title = document.getElementById("taskTitle").value.trim();
@@ -643,6 +655,7 @@ async function addQuickTask(event) {
 function openEditDialog(id) {
   const task = appState.tasks.find((entry) => entry.id === id);
   if (!task) return;
+  document.getElementById("deleteTaskButton").dataset.taskId = String(task.id);
   document.getElementById("editTaskId").value = task.id;
   document.getElementById("editTaskTitle").value = task.title;
   document.getElementById("editTaskDescription").value = task.description || "";
@@ -870,6 +883,17 @@ editForm.addEventListener("submit", async (event) => {
 });
 
 document.getElementById("closeEditDialog").addEventListener("click", () => editDialog.close());
+document.getElementById("deleteTaskButton").addEventListener("click", async (event) => {
+  const taskId = Number(event.currentTarget.dataset.taskId);
+  if (!taskId) return;
+  if (!window.confirm(t("deleteConfirm"))) return;
+  try {
+    await deleteTask(taskId);
+    editDialog.close();
+  } catch (error) {
+    window.alert(`Löschen fehlgeschlagen: ${error.code || error.message}`);
+  }
+});
 
 document.querySelector(`input[name="dayMode"][value="${appState.settings.dayMode}"]`).checked = true;
 document.getElementById("taskDueDate").value = todayString();
