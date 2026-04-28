@@ -268,6 +268,39 @@ small {
 .task-form, .form-grid { grid-template-columns: 1fr; }
 .field { display: grid; gap: 8px; }
 
+.optional-details {
+  display: grid;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface-2);
+}
+
+.optional-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.optional-details-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.duration-inputs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.duration-inputs span {
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
 .inline-create-form {
   display: flex;
   flex-direction: column;
@@ -301,6 +334,25 @@ input[type="text"] {
   background: #fff;
   color: var(--text);
   font: inherit;
+}
+
+input[type="number"] {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px 16px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .quick-add-card {
@@ -539,13 +591,26 @@ textarea { min-height: 92px; resize: vertical; }
     gap: 18px;
   }
 
-  .tasks-card {
-    grid-column: 1 / span 2;
+  .dashboard-card,
+  .quick-add-card,
+  .tasks-card,
+  .parked-card {
+    grid-column: 1;
   }
 
-  .done-card,
+  .context-card,
+  .recurring-card,
+  .done-card {
+    grid-column: 2;
+  }
+
+  .tasks-card,
   .section-full {
     grid-column: 1 / -1;
+  }
+
+  .done-card {
+    grid-column: 2;
   }
 
   .compact-metrics {
@@ -553,6 +618,10 @@ textarea { min-height: 92px; resize: vertical; }
   }
 
   .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .optional-details-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 

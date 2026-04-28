@@ -1,10 +1,11 @@
-const STORAGE_KEY = "mindfog-v4";
+const STORAGE_KEY = "mindfog-v5";
 const DEFAULT_SECTION_ORDER = [
   "dashboardSection",
   "contextSection",
+  "quickAddSection",
+  "recurringSection",
   "tasksSection",
   "parkedSection",
-  "quickAddSection",
   "doneSection",
 ];
 
@@ -31,6 +32,15 @@ const translations = {
     domainPersonal: "Privat",
     domainOther: "Sonstiges",
     priorityLabel: "Priorität",
+    optionalDetailsLabel: "Optionale Details",
+    durationLabel: "Dauer",
+    hoursShort: "Std",
+    minutesShort: "Min",
+    recurringLabel: "Recurring Task",
+    recurringNone: "Kein Intervall",
+    recurringDaily: "Täglich",
+    recurringWeekly: "Wöchentlich am gleichen Wochentag",
+    recurringMonthly: "Monatlich am gleichen Datum",
     dueDateLabel: "Fällig bis",
     statusLabel: "Status",
     statusOpen: "Offen",
@@ -44,7 +54,13 @@ const translations = {
     saveButton: "Speichern",
     tasksTitle: "Tasks",
     tasksCopy: "Die wichtigsten Tasks stehen oben. Alles Weitere bleibt direkt darunter erreichbar.",
+    tasksFilterAll: "Alle",
     dueTodayTitle: "Due today",
+    recurringTasksTitle: "Recurring Tasks",
+    recurringTasksCopy:
+      "Hier bearbeitest du den Master-Task und sein Intervall. Die einzelnen Vorkommen erscheinen separat in deiner Taskliste.",
+    recurringTasksEmpty: "Noch keine wiederkehrenden Tasks vorhanden.",
+    recurringMasterBadge: "Master",
     showAllTasks: "Alle Tasks ansehen",
     hideAllTasks: "Zusätzliche Tasks ausblenden",
     parkedTitle: "Geparkte Tasks",
@@ -61,7 +77,7 @@ const translations = {
     pointsSuffix: "Punkte",
     scoreLabel: "Score",
     scoreExplainer:
-      "Der Score ergibt sich aus Priorität und Fälligkeit. Höhere Priorität erhöht den Score deutlich, nahe oder überfällige Tasks bekommen zusätzliche Punkte.",
+      "Der Score ergibt sich aus Priorität, Fälligkeit und Dauer. Höhere Priorität erhöht den Score deutlich, nahe oder überfällige Tasks bekommen zusätzliche Punkte, sehr kurze Tasks erhalten einen kleinen Bonus.",
     scoreInfo:
       "Der Score kombiniert Priorität und Fälligkeit. Im Modus Überforderter Tag werden die kleinsten Scores zuerst gezeigt, damit du mit einfacheren Tasks starten kannst.",
     modeInfo:
@@ -124,6 +140,15 @@ const translations = {
     domainPersonal: "Personal",
     domainOther: "Other",
     priorityLabel: "Priority",
+    optionalDetailsLabel: "Optional details",
+    durationLabel: "Duration",
+    hoursShort: "hr",
+    minutesShort: "min",
+    recurringLabel: "Recurring task",
+    recurringNone: "No interval",
+    recurringDaily: "Daily",
+    recurringWeekly: "Weekly on the same weekday",
+    recurringMonthly: "Monthly on the same date",
     dueDateLabel: "Due date",
     statusLabel: "Status",
     statusOpen: "Open",
@@ -137,7 +162,13 @@ const translations = {
     saveButton: "Save",
     tasksTitle: "Tasks",
     tasksCopy: "The most relevant tasks stay at the top. Everything else remains directly below.",
+    tasksFilterAll: "All",
     dueTodayTitle: "Due today",
+    recurringTasksTitle: "Recurring tasks",
+    recurringTasksCopy:
+      "Manage the master task and its interval here. The individual occurrences appear separately in your task list.",
+    recurringTasksEmpty: "No recurring tasks yet.",
+    recurringMasterBadge: "Master",
     showAllTasks: "Show all tasks",
     hideAllTasks: "Hide additional tasks",
     parkedTitle: "Parked tasks",
@@ -154,7 +185,7 @@ const translations = {
     pointsSuffix: "points",
     scoreLabel: "Score",
     scoreExplainer:
-      "Score is based on priority and due date. Higher priority raises the score, and tasks that are due soon or overdue gain extra points.",
+      "Score is based on priority, due date, and duration. Higher priority raises the score, tasks due soon or overdue gain extra points, and very short tasks get a small bonus.",
     scoreInfo:
       "Score combines priority and due date. In overloaded mode the smallest scores appear first so you can start with easier tasks.",
     modeInfo:
@@ -205,6 +236,7 @@ const defaultState = {
 
 const appState = loadState();
 let doneFilter = "all";
+let taskFilter = "all";
 let showAllTasks = false;
 let currentUser = null;
 let draggedSectionId = null;
@@ -219,6 +251,7 @@ const pointsGrid = document.getElementById("pointsGrid");
 const supportNote = document.getElementById("supportNote");
 const topTasks = document.getElementById("topTasks");
 const allTasks = document.getElementById("allTasks");
+const recurringList = document.getElementById("recurringList");
 const parkedList = document.getElementById("parkedList");
 const quickAddForm = document.getElementById("quickAddForm");
 const doneList = document.getElementById("doneList");
@@ -272,6 +305,34 @@ function saveState() {
 
 function sanitizeSectionOrder(order) {
   const candidate = Array.isArray(order) ? order.filter((id) => DEFAULT_SECTION_ORDER.includes(id)) : [];
+  const legacyDefaultOrders = [
+    [
+      "dashboardSection",
+      "contextSection",
+      "tasksSection",
+      "parkedSection",
+      "quickAddSection",
+      "doneSection",
+    ],
+    [
+      "dashboardSection",
+      "contextSection",
+      "quickAddSection",
+      "recurringSection",
+      "tasksSection",
+      "parkedSection",
+      "doneSection",
+    ],
+  ];
+  if (
+    legacyDefaultOrders.some(
+      (legacyOrder) =>
+        candidate.length === legacyOrder.length &&
+        legacyOrder.every((id, index) => candidate[index] === id),
+    )
+  ) {
+    return [...DEFAULT_SECTION_ORDER];
+  }
   const merged = [...candidate];
   DEFAULT_SECTION_ORDER.forEach((id) => {
     if (!merged.includes(id)) merged.push(id);
@@ -315,9 +376,15 @@ function dueWeight(dueDate) {
 function scoreTask(task) {
   let score = task.impact * 5;
   const dueDiff = Math.ceil((dueWeight(task.dueDate) - Date.now()) / 86400000);
+  const duration = Number(task.durationMinutes || 30);
   if (dueDiff <= 0) score += 8;
   else if (dueDiff <= 2) score += 5;
   else if (dueDiff <= 7) score += 2;
+  if (duration <= 15) score += 3;
+  else if (duration <= 30) score += 2;
+  else if (duration <= 60) score += 1;
+  else if (duration >= 120) score -= 1;
+  if (duration >= 240) score -= 2;
   return score;
 }
 
@@ -343,11 +410,20 @@ function sortActiveTasks(tasks) {
 }
 
 function getTasksByStatus(status) {
-  return appState.tasks.filter((task) => task.status === status).map(withScore);
+  return appState.tasks.filter((task) => task.kind !== "recurring_master" && task.status === status).map(withScore);
+}
+
+function recurringMasterTasks() {
+  return appState.tasks
+    .filter((task) => task.kind === "recurring_master")
+    .sort((a, b) => a.createdAt - b.createdAt)
+    .map(withScore);
 }
 
 function activeTasks() {
-  return sortActiveTasks(getTasksByStatus("active"));
+  const filtered = sortActiveTasks(getTasksByStatus("active"));
+  if (taskFilter === "all") return filtered;
+  return filtered.filter((task) => task.domain === taskFilter);
 }
 
 function topThreeTasks() {
@@ -418,6 +494,8 @@ function buildTaskCard(task, options = {}) {
   const dueText = task.dueDate
     ? new Date(task.dueDate).toLocaleDateString(appState.language === "de" ? "de-CH" : "en-US")
     : "";
+  const durationText = formatDuration(task.durationMinutes || 30);
+  const recurringBadge = isRecurringTask(task) ? " &#8635;" : "";
   const description = task.description ? `<p class="task-description">${escapeHtml(task.description)}</p>` : "";
 
   let actions = "";
@@ -438,6 +516,7 @@ function buildTaskCard(task, options = {}) {
 
   const detailParts = [];
   if (dueText) detailParts.push(`<span class="task-detail">${dueText}</span>`);
+  if (durationText) detailParts.push(`<span class="task-detail">${durationText}${recurringBadge}</span>`);
   if (done && task.completedAt) {
     detailParts.push(
       `<span class="task-detail">${t("doneOn")} ${new Date(task.completedAt).toLocaleDateString(appState.language === "de" ? "de-CH" : "en-US")}</span>`,
@@ -460,6 +539,53 @@ function buildTaskCard(task, options = {}) {
           <span class="score-value">+${task.score}</span>
         </div>
         ${actions}
+      </div>
+    </div>
+  `;
+  return article;
+}
+
+function isRecurringTask(task) {
+  return Boolean(
+    task &&
+      task.kind !== "recurring_master" &&
+      (task.recurringMasterId || (task.recurringType && task.recurringType !== "none")),
+  );
+}
+
+function recurringTypeLabel(task) {
+  if (task.recurringType === "daily") return t("recurringDaily");
+  if (task.recurringType === "weekly") return t("recurringWeekly");
+  if (task.recurringType === "monthly") return t("recurringMonthly");
+  return t("recurringNone");
+}
+
+function buildRecurringMasterCard(task) {
+  const article = document.createElement("article");
+  article.className = "task-card";
+  const dueText = task.dueDate
+    ? new Date(task.dueDate).toLocaleDateString(appState.language === "de" ? "de-CH" : "en-US")
+    : "";
+  const durationText = formatDuration(task.durationMinutes || 30);
+  const description = task.description ? `<p class="task-description">${escapeHtml(task.description)}</p>` : "";
+  const detailParts = [
+    `<span class="task-detail">&#8635; ${escapeHtml(recurringTypeLabel(task))}</span>`,
+  ];
+  if (dueText) detailParts.push(`<span class="task-detail">${dueText}</span>`);
+  if (durationText) detailParts.push(`<span class="task-detail">${durationText}</span>`);
+
+  article.innerHTML = `
+    <div class="task-card-top">
+      <div class="task-main">
+        <span class="task-chip">${t("recurringMasterBadge")}</span>
+        <strong>${escapeHtml(task.title)}</strong>
+        ${description}
+      </div>
+    </div>
+    <div class="task-card-bottom">
+      <div class="task-details">${detailParts.join("")}</div>
+      <div class="task-actions">
+        <button class="action-button action-edit" type="button" data-action="edit" data-id="${task.id}">${t("statusEdit")}</button>
       </div>
     </div>
   `;
@@ -493,6 +619,16 @@ function renderParked() {
   parked.forEach((task) => parkedList.appendChild(buildTaskCard(task, { parked: true })));
 }
 
+function renderRecurringMasters() {
+  const masters = recurringMasterTasks();
+  recurringList.innerHTML = "";
+  if (!masters.length) {
+    recurringList.appendChild(createEmptyState(t("recurringTasksEmpty")));
+    return;
+  }
+  masters.forEach((task) => recurringList.appendChild(buildRecurringMasterCard(task)));
+}
+
 function renderDone() {
   let done = getTasksByStatus("done").sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
   if (doneFilter === "today") done = done.filter((task) => (task.completedAt || 0) >= startOfToday());
@@ -510,6 +646,7 @@ function render() {
   if (!currentUser) return;
   renderDashboard();
   renderTasks();
+  renderRecurringMasters();
   renderParked();
   renderDone();
 }
@@ -588,29 +725,58 @@ function statusFromValue(value) {
 }
 
 async function createTask(payload) {
-  const data = await api("/api/tasks", {
+  await api("/api/tasks", {
     method: "POST",
     body: JSON.stringify(payload),
   });
-  appState.tasks.unshift(data.task);
-  render();
+  await refreshTasks();
 }
 
 async function patchTask(id, payload) {
-  const data = await api(`/api/tasks/${id}`, {
+  await api(`/api/tasks/${id}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   });
-  appState.tasks = appState.tasks.map((task) => (task.id === id ? data.task : task));
-  render();
+  await refreshTasks();
+}
+
+function formatDuration(minutes) {
+  const value = Number(minutes || 0);
+  if (!value) return "";
+  if (value < 60) {
+    return appState.language === "de" ? `${value} Min` : `${value} min`;
+  }
+  if (value === 60) {
+    return appState.language === "de" ? "1 Std" : "1 hr";
+  }
+  if (value < 240) {
+    const hours = value / 60;
+    return appState.language === "de" ? `${hours} Std` : `${hours} hr`;
+  }
+  return appState.language === "de" ? "Halber Tag" : "Half day";
+}
+
+function getDurationMinutes(hoursInputId, minutesInputId) {
+  const hours = Math.max(0, Number(document.getElementById(hoursInputId).value || 0));
+  const minutes = Math.max(0, Number(document.getElementById(minutesInputId).value || 0));
+  const normalizedMinutes = Math.min(59, minutes);
+  const total = hours * 60 + normalizedMinutes;
+  return Math.max(5, Math.min(24 * 60, total || 30));
+}
+
+function setDurationInputs(hoursInputId, minutesInputId, totalMinutes) {
+  const total = Math.max(5, Number(totalMinutes || 30));
+  const hours = Math.floor(total / 60);
+  const minutes = total % 60;
+  document.getElementById(hoursInputId).value = String(hours);
+  document.getElementById(minutesInputId).value = String(minutes);
 }
 
 async function deleteTask(id) {
   await api(`/api/tasks/${id}`, {
     method: "DELETE",
   });
-  appState.tasks = appState.tasks.filter((task) => task.id !== id);
-  render();
+  await refreshTasks();
 }
 
 async function addTask(event) {
@@ -623,6 +789,8 @@ async function addTask(event) {
     description: document.getElementById("taskDescription").value.trim(),
     domain: document.getElementById("taskDomain").value,
     impact: Number(document.getElementById("taskImpact").value),
+    durationMinutes: getDurationMinutes("taskDurationHours", "taskDurationMinutes"),
+    recurringType: document.getElementById("taskRecurring").value,
     dueDate: document.getElementById("taskDueDate").value || todayString(),
     status: statusFromValue(document.getElementById("taskStatus").value),
   });
@@ -630,6 +798,8 @@ async function addTask(event) {
   taskForm.reset();
   document.getElementById("taskDueDate").value = todayString();
   document.getElementById("taskStatus").value = "active";
+  setDurationInputs("taskDurationHours", "taskDurationMinutes", 30);
+  document.getElementById("taskRecurring").value = "none";
   createDialog.close();
 }
 
@@ -644,12 +814,16 @@ async function addQuickTask(event) {
     description: document.getElementById("quickAddDescription").value.trim(),
     domain: "Other",
     impact: Number(document.getElementById("quickAddImpact").value),
+    durationMinutes: getDurationMinutes("quickAddDurationHours", "quickAddDurationMinutes"),
+    recurringType: document.getElementById("quickAddRecurring").value,
     dueDate: document.getElementById("quickAddDueDate").value || todayString(),
     status: "active",
   });
 
   quickAddForm.reset();
   document.getElementById("quickAddDueDate").value = todayString();
+  setDurationInputs("quickAddDurationHours", "quickAddDurationMinutes", 30);
+  document.getElementById("quickAddRecurring").value = "none";
 }
 
 function openEditDialog(id) {
@@ -661,6 +835,8 @@ function openEditDialog(id) {
   document.getElementById("editTaskDescription").value = task.description || "";
   document.getElementById("editTaskDomain").value = task.domain;
   document.getElementById("editTaskImpact").value = String(task.impact);
+  setDurationInputs("editTaskDurationHours", "editTaskDurationMinutes", task.durationMinutes || 30);
+  document.getElementById("editTaskRecurring").value = task.recurringType || "none";
   document.getElementById("editTaskDueDate").value = task.dueDate || todayString();
   document.getElementById("editTaskStatus").value = task.status;
   editDialog.showModal();
@@ -765,6 +941,7 @@ quickAddForm.addEventListener("submit", (event) => addQuickTask(event).catch(() 
 topTasks.addEventListener("click", (event) => handleActionClick(event).catch(() => {}));
 allTasks.addEventListener("click", (event) => handleActionClick(event).catch(() => {}));
 parkedList.addEventListener("click", (event) => handleActionClick(event).catch(() => {}));
+recurringList.addEventListener("click", (event) => handleActionClick(event).catch(() => {}));
 doneList.addEventListener("click", (event) => handleActionClick(event).catch(() => {}));
 
 document.getElementById("openCreateDialogButton").addEventListener("click", () => {
@@ -809,6 +986,14 @@ document.querySelectorAll("[data-done-filter]").forEach((button) => {
     doneFilter = button.dataset.doneFilter;
     document.querySelectorAll("[data-done-filter]").forEach((item) => item.classList.toggle("active", item === button));
     renderDone();
+  });
+});
+
+document.querySelectorAll("[data-task-filter]").forEach((button) => {
+  button.addEventListener("click", () => {
+    taskFilter = button.dataset.taskFilter;
+    document.querySelectorAll("[data-task-filter]").forEach((item) => item.classList.toggle("active", item === button));
+    renderTasks();
   });
 });
 
@@ -876,6 +1061,8 @@ editForm.addEventListener("submit", async (event) => {
     description: document.getElementById("editTaskDescription").value.trim(),
     domain: document.getElementById("editTaskDomain").value,
     impact: Number(document.getElementById("editTaskImpact").value),
+    durationMinutes: getDurationMinutes("editTaskDurationHours", "editTaskDurationMinutes"),
+    recurringType: document.getElementById("editTaskRecurring").value,
     dueDate: document.getElementById("editTaskDueDate").value || todayString(),
     status: statusFromValue(document.getElementById("editTaskStatus").value),
   });
@@ -898,7 +1085,11 @@ document.getElementById("deleteTaskButton").addEventListener("click", async (eve
 document.querySelector(`input[name="dayMode"][value="${appState.settings.dayMode}"]`).checked = true;
 document.getElementById("taskDueDate").value = todayString();
 document.getElementById("taskStatus").value = "active";
+setDurationInputs("taskDurationHours", "taskDurationMinutes", 30);
+document.getElementById("taskRecurring").value = "none";
 document.getElementById("quickAddDueDate").value = todayString();
+setDurationInputs("quickAddDurationHours", "quickAddDurationMinutes", 30);
+document.getElementById("quickAddRecurring").value = "none";
 applyTranslations();
 renderSectionOrder();
 setAuthenticatedState(null);

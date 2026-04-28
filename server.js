@@ -75,14 +75,16 @@ app.post("/api/logout", requireAuth, (req, res) => {
 });
 
 app.get("/api/tasks", requireAuth, (req, res) => {
+  ensureRecurringTasksVisible(req.user.id);
   const tasks = db
     .prepare(
-      `SELECT id, title, description, domain, impact, due_date AS dueDate, status, created_at AS createdAt, completed_at AS completedAt
+      `SELECT id, title, description, domain, impact, kind, recurring_master_id AS recurringMasterId, recurring_instance_anchor AS recurringInstanceAnchor, duration_minutes AS durationMinutes, recurring_type AS recurringType, recurring_anchor AS recurringAnchor, recurring_lead_days AS recurringLeadDays, due_date AS dueDate, status, created_at AS createdAt, completed_at AS completedAt
        FROM tasks
        WHERE user_id = ?
+         AND (kind = 'recurring_master' OR recurring_instance_anchor IS NULL OR recurring_instance_anchor <= ?)
        ORDER BY created_at DESC`,
     )
-    .all(req.user.id);
+    .all(req.user.id, todayString());
   res.json({ tasks });
 });
 
@@ -92,25 +94,13 @@ app.post("/api/tasks", requireAuth, (req, res) => {
     return res.status(400).json({ error: "title_required" });
   }
 
-  const now = Date.now();
-  const result = db
-    .prepare(
-      `INSERT INTO tasks (user_id, title, description, domain, impact, due_date, status, created_at, completed_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      req.user.id,
-      task.title,
-      task.description,
-      task.domain,
-      task.impact,
-      task.dueDate,
-      task.status,
-      now,
-      task.status === "done" ? now : null,
-    );
+  if (task.recurringType !== "none") {
+    const masterId = createRecurringMaster(req.user.id, task);
+    return res.status(201).json({ task: getTaskById(req.user.id, masterId) });
+  }
 
-  res.status(201).json({ task: getTaskById(req.user.id, Number(result.lastInsertRowid)) });
+  const taskId = createSingleTask(req.user.id, task);
+  res.status(201).json({ task: getTaskById(req.user.id, taskId) });
 });
 
 app.patch("/api/tasks/:id", requireAuth, (req, res) => {
@@ -127,9 +117,14 @@ app.patch("/api/tasks/:id", requireAuth, (req, res) => {
       ? existing.completedAt || Date.now()
       : null;
 
+  if (existing.kind === "recurring_master") {
+    const updatedMaster = updateRecurringMaster(req.user.id, existing, updates);
+    return res.json({ task: updatedMaster });
+  }
+
   db.prepare(
     `UPDATE tasks
-     SET title = ?, description = ?, domain = ?, impact = ?, due_date = ?, status = ?, completed_at = ?
+     SET title = ?, description = ?, domain = ?, impact = ?, due_date = ?, status = ?, completed_at = ?, duration_minutes = ?, recurring_type = ?, recurring_anchor = ?, recurring_lead_days = ?
      WHERE id = ? AND user_id = ?`,
   ).run(
     updates.title || existing.title,
@@ -139,9 +134,23 @@ app.patch("/api/tasks/:id", requireAuth, (req, res) => {
     updates.dueDate || existing.dueDate,
     nextStatus,
     nextCompletedAt,
+    updates.durationMinutes || existing.durationMinutes || 30,
+    updates.recurringType || existing.recurringType || "none",
+    existing.recurringAnchor || null,
+    existing.recurringLeadDays || 0,
     taskId,
     req.user.id,
   );
+
+  if (existing.status !== "done" && nextStatus === "done") {
+    createRecurringFollowUpFromInstance(req.user.id, {
+      ...existing,
+      ...updates,
+      status: nextStatus,
+      dueDate: updates.dueDate || existing.dueDate || todayString(),
+      durationMinutes: updates.durationMinutes || existing.durationMinutes || 30,
+    });
+  }
 
   res.json({ task: getTaskById(req.user.id, taskId) });
 });
@@ -153,7 +162,11 @@ app.delete("/api/tasks/:id", requireAuth, (req, res) => {
     return res.status(404).json({ error: "task_not_found" });
   }
 
-  db.prepare("DELETE FROM tasks WHERE id = ? AND user_id = ?").run(taskId, req.user.id);
+  if (existing.kind === "recurring_master") {
+    db.prepare("DELETE FROM tasks WHERE user_id = ? AND (id = ? OR recurring_master_id = ?)").run(req.user.id, taskId, taskId);
+  } else {
+    db.prepare("DELETE FROM tasks WHERE id = ? AND user_id = ?").run(taskId, req.user.id);
+  }
   res.status(204).end();
 });
 
@@ -224,6 +237,13 @@ function openDatabase(filename) {
       description TEXT DEFAULT '',
       domain TEXT NOT NULL,
       impact INTEGER NOT NULL,
+      kind TEXT NOT NULL DEFAULT 'task',
+      recurring_master_id INTEGER,
+      recurring_instance_anchor TEXT,
+      duration_minutes INTEGER NOT NULL DEFAULT 30,
+      recurring_type TEXT NOT NULL DEFAULT 'none',
+      recurring_anchor TEXT,
+      recurring_lead_days INTEGER NOT NULL DEFAULT 0,
       due_date TEXT,
       status TEXT NOT NULL,
       created_at INTEGER NOT NULL,
@@ -233,8 +253,98 @@ function openDatabase(filename) {
     CREATE INDEX IF NOT EXISTS idx_tasks_user_created ON tasks(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
   `);
+  ensureColumn(database, "tasks", "duration_minutes", "INTEGER NOT NULL DEFAULT 30");
+  ensureColumn(database, "tasks", "kind", "TEXT NOT NULL DEFAULT 'task'");
+  ensureColumn(database, "tasks", "recurring_master_id", "INTEGER");
+  ensureColumn(database, "tasks", "recurring_instance_anchor", "TEXT");
+  ensureColumn(database, "tasks", "recurring_type", "TEXT NOT NULL DEFAULT 'none'");
+  ensureColumn(database, "tasks", "recurring_anchor", "TEXT");
+  ensureColumn(database, "tasks", "recurring_lead_days", "INTEGER NOT NULL DEFAULT 0");
+  migrateLegacyRecurringTasks(database);
   database.prepare("DELETE FROM sessions WHERE expires_at < ?").run(Date.now());
   return database;
+}
+
+function ensureColumn(database, tableName, columnName, columnDefinition) {
+  const columns = database.prepare(`PRAGMA table_info(${tableName})`).all();
+  if (!columns.some((column) => column.name === columnName)) {
+    database.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDefinition}`);
+  }
+}
+
+function migrateLegacyRecurringTasks(database) {
+  const legacyTasks = database
+    .prepare(
+      `SELECT id, user_id AS userId, title, description, domain, impact, status, duration_minutes AS durationMinutes,
+              recurring_type AS recurringType, recurring_anchor AS recurringAnchor, recurring_lead_days AS recurringLeadDays,
+              due_date AS dueDate, created_at AS createdAt
+       FROM tasks
+       WHERE kind = 'task' AND recurring_type != 'none' AND recurring_master_id IS NULL`,
+    )
+    .all();
+
+  const insertMaster = database.prepare(
+    `INSERT INTO tasks (
+      user_id, title, description, domain, impact, kind, duration_minutes, recurring_type, recurring_anchor,
+      recurring_lead_days, due_date, status, created_at, completed_at
+    )
+    VALUES (?, ?, ?, ?, ?, 'recurring_master', ?, ?, ?, ?, ?, ?, ?, NULL)`,
+  );
+
+  const linkInstance = database.prepare(
+    `UPDATE tasks
+     SET recurring_master_id = ?, recurring_instance_anchor = ?
+     WHERE id = ?`,
+  );
+
+  for (const task of legacyTasks) {
+    const anchor = task.recurringAnchor || isoDateFromTimestamp(task.createdAt) || todayString();
+    const masterStatus = task.status === "parked" ? "parked" : "active";
+    const result = insertMaster.run(
+      task.userId,
+      task.title,
+      task.description || "",
+      task.domain,
+      task.impact,
+      task.durationMinutes || 30,
+      task.recurringType,
+      anchor,
+      task.recurringLeadDays || dateDiffDays(anchor, task.dueDate || anchor),
+      task.dueDate || anchor,
+      masterStatus,
+      task.createdAt,
+    );
+    linkInstance.run(Number(result.lastInsertRowid), anchor, task.id);
+  }
+}
+
+function todayString() {
+  const now = new Date();
+  const month = `${now.getMonth() + 1}`.padStart(2, "0");
+  const day = `${now.getDate()}`.padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+function isoDateFromTimestamp(timestamp) {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return todayString();
+  return date.toISOString().slice(0, 10);
+}
+
+function dateDiffDays(fromDate, toDate) {
+  const from = new Date(fromDate);
+  const to = new Date(toDate);
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return 0;
+  from.setHours(0, 0, 0, 0);
+  to.setHours(0, 0, 0, 0);
+  return Math.round((to.getTime() - from.getTime()) / 86400000);
+}
+
+function addDays(baseDate, days) {
+  const date = new Date(baseDate);
+  if (Number.isNaN(date.getTime())) return todayString();
+  date.setDate(date.getDate() + Number(days || 0));
+  return date.toISOString().slice(0, 10);
 }
 
 function normalizeUsername(value) {
@@ -340,6 +450,8 @@ function sanitizeTaskInput(input, options = {}) {
     description: typeof body.description === "string" ? body.description.trim() : "",
     domain,
     impact,
+    durationMinutes: Math.max(5, Math.min(24 * 60, Number(body.durationMinutes) || 30)),
+    recurringType: ["none", "daily", "weekly", "monthly"].includes(body.recurringType) ? body.recurringType : "none",
     dueDate: typeof body.dueDate === "string" ? body.dueDate : "",
     status,
   };
@@ -348,9 +460,217 @@ function sanitizeTaskInput(input, options = {}) {
 function getTaskById(userId, taskId) {
   return db
     .prepare(
-      `SELECT id, title, description, domain, impact, due_date AS dueDate, status, created_at AS createdAt, completed_at AS completedAt
+      `SELECT id, title, description, domain, impact, kind, recurring_master_id AS recurringMasterId, recurring_instance_anchor AS recurringInstanceAnchor, duration_minutes AS durationMinutes, recurring_type AS recurringType, recurring_anchor AS recurringAnchor, recurring_lead_days AS recurringLeadDays, due_date AS dueDate, status, created_at AS createdAt, completed_at AS completedAt
        FROM tasks
        WHERE user_id = ? AND id = ?`,
     )
     .get(userId, taskId);
+}
+
+function createSingleTask(userId, task, overrides = {}) {
+  const now = overrides.createdAt || Date.now();
+  const result = db
+    .prepare(
+      `INSERT INTO tasks (
+        user_id, title, description, domain, impact, kind, recurring_master_id, recurring_instance_anchor,
+        duration_minutes, recurring_type, recurring_anchor, recurring_lead_days, due_date, status, created_at, completed_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      userId,
+      task.title,
+      task.description || "",
+      task.domain,
+      task.impact,
+      overrides.kind || "task",
+      overrides.recurringMasterId || null,
+      overrides.recurringInstanceAnchor || null,
+      task.durationMinutes || 30,
+      task.recurringType || "none",
+      overrides.recurringAnchor ?? null,
+      overrides.recurringLeadDays || 0,
+      overrides.dueDate ?? task.dueDate ?? "",
+      overrides.status || task.status || "active",
+      now,
+      overrides.completedAt ?? (overrides.status === "done" ? now : null),
+    );
+  return Number(result.lastInsertRowid);
+}
+
+function createRecurringMaster(userId, task) {
+  const now = Date.now();
+  const anchor = isoDateFromTimestamp(now);
+  const leadDays = dateDiffDays(anchor, task.dueDate || anchor);
+  const masterStatus = task.status === "parked" ? "parked" : "active";
+  const masterDueDate = addDays(anchor, leadDays);
+  const masterId = createSingleTask(
+    userId,
+    { ...task, status: masterStatus },
+    {
+      kind: "recurring_master",
+      recurringAnchor: anchor,
+      recurringLeadDays: leadDays,
+      dueDate: masterDueDate,
+      status: masterStatus,
+      createdAt: now,
+    },
+  );
+
+  if (masterStatus === "active") {
+    createRecurringInstance(userId, {
+      ...task,
+      recurringType: task.recurringType,
+      recurringAnchor: anchor,
+      recurringLeadDays: leadDays,
+      recurringMasterId: masterId,
+    }, anchor);
+  }
+
+  return masterId;
+}
+
+function createRecurringInstance(userId, masterTask, anchor) {
+  const dueDate = addDays(anchor, masterTask.recurringLeadDays || 0);
+  const instanceId = createSingleTask(
+    userId,
+    { ...masterTask, status: "active" },
+    {
+      recurringMasterId: masterTask.recurringMasterId || masterTask.id,
+      recurringInstanceAnchor: anchor,
+      recurringAnchor: masterTask.recurringAnchor || anchor,
+      recurringLeadDays: masterTask.recurringLeadDays || 0,
+      dueDate,
+      status: "active",
+    },
+  );
+  db.prepare(
+    `UPDATE tasks
+     SET due_date = ?
+     WHERE user_id = ? AND id = ?`,
+  ).run(dueDate, userId, masterTask.recurringMasterId || masterTask.id);
+  return instanceId;
+}
+
+function updateRecurringMaster(userId, existing, updates) {
+  const nextStatus = updates.status === "parked" ? "parked" : "active";
+  const recurringType = updates.recurringType || existing.recurringType || "daily";
+  const recurringAnchor = existing.recurringAnchor || isoDateFromTimestamp(existing.createdAt) || todayString();
+  const dueDate = updates.dueDate || existing.dueDate || recurringAnchor;
+  const recurringLeadDays = dateDiffDays(recurringAnchor, dueDate);
+
+  db.prepare(
+    `UPDATE tasks
+     SET title = ?, description = ?, domain = ?, impact = ?, duration_minutes = ?, recurring_type = ?, recurring_anchor = ?, recurring_lead_days = ?, due_date = ?, status = ?
+     WHERE id = ? AND user_id = ?`,
+  ).run(
+    updates.title || existing.title,
+    updates.description ?? existing.description,
+    updates.domain || existing.domain,
+    updates.impact || existing.impact,
+    updates.durationMinutes || existing.durationMinutes || 30,
+    recurringType,
+    recurringAnchor,
+    recurringLeadDays,
+    dueDate,
+    nextStatus,
+    existing.id,
+    userId,
+  );
+
+  if (nextStatus === "active") {
+    ensureRecurringInstanceForMaster(userId, {
+      ...existing,
+      ...updates,
+      id: existing.id,
+      recurringType,
+      recurringAnchor,
+      recurringLeadDays,
+      durationMinutes: updates.durationMinutes || existing.durationMinutes || 30,
+      title: updates.title || existing.title,
+      description: updates.description ?? existing.description,
+      domain: updates.domain || existing.domain,
+      impact: updates.impact || existing.impact,
+    });
+  }
+
+  return getTaskById(userId, existing.id);
+}
+
+function createRecurringFollowUpFromInstance(userId, task) {
+  if (!task.recurringMasterId) return;
+  const master = getTaskById(userId, task.recurringMasterId);
+  if (!master || master.kind !== "recurring_master" || master.status !== "active" || !master.recurringType || master.recurringType === "none") {
+    return;
+  }
+  const currentAnchor = task.recurringInstanceAnchor || task.recurringAnchor || isoDateFromTimestamp(task.createdAt) || todayString();
+  const nextAnchor = nextRecurringDate(currentAnchor, master.recurringType);
+  const exists = db
+    .prepare(
+      `SELECT id FROM tasks
+       WHERE user_id = ? AND recurring_master_id = ? AND recurring_instance_anchor = ?
+       LIMIT 1`,
+    )
+    .get(userId, master.id, nextAnchor);
+  if (exists) return;
+  createRecurringInstance(
+    userId,
+    { ...master, recurringMasterId: master.id },
+    nextAnchor,
+  );
+}
+
+function ensureRecurringInstanceForMaster(userId, master) {
+  const latest = db
+    .prepare(
+      `SELECT recurring_instance_anchor AS recurringInstanceAnchor, status
+       FROM tasks
+       WHERE user_id = ? AND recurring_master_id = ?
+       ORDER BY recurring_instance_anchor DESC, created_at DESC
+       LIMIT 1`,
+    )
+    .get(userId, master.id);
+  const nextAnchor = latest?.recurringInstanceAnchor
+    ? (latest.status === "done" ? nextRecurringDate(latest.recurringInstanceAnchor, master.recurringType) : latest.recurringInstanceAnchor)
+    : (master.recurringAnchor || todayString());
+  const exists = db
+    .prepare(
+      `SELECT id FROM tasks
+       WHERE user_id = ? AND recurring_master_id = ? AND recurring_instance_anchor = ? AND status != 'done'
+       LIMIT 1`,
+    )
+    .get(userId, master.id, nextAnchor);
+  if (!exists) {
+    createRecurringInstance(userId, { ...master, recurringMasterId: master.id }, nextAnchor);
+  }
+}
+
+function ensureRecurringTasksVisible(userId) {
+  const masters = db
+    .prepare(
+      `SELECT id, title, description, domain, impact, status, duration_minutes AS durationMinutes, recurring_type AS recurringType, recurring_anchor AS recurringAnchor, recurring_lead_days AS recurringLeadDays, due_date AS dueDate, created_at AS createdAt
+       FROM tasks
+       WHERE user_id = ? AND kind = 'recurring_master' AND status = 'active' AND recurring_type != 'none'`,
+    )
+    .all(userId);
+
+  for (const master of masters) {
+    ensureRecurringInstanceForMaster(userId, master);
+  }
+}
+
+function nextRecurringDate(baseDate, recurringType) {
+  const date = new Date(baseDate);
+  if (Number.isNaN(date.getTime())) return todayString();
+  if (recurringType === "daily") {
+    date.setDate(date.getDate() + 1);
+  } else if (recurringType === "weekly") {
+    date.setDate(date.getDate() + 7);
+  } else if (recurringType === "monthly") {
+    const targetDay = date.getDate();
+    date.setMonth(date.getMonth() + 1, 1);
+    const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    date.setDate(Math.min(targetDay, lastDay));
+  }
+  return date.toISOString().slice(0, 10);
 }

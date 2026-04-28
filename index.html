@@ -150,6 +150,12 @@
           <p class="section-copy" data-i18n="tasksCopy">
             Die wichtigsten Tasks stehen oben. Alles Weitere bleibt direkt darunter erreichbar.
           </p>
+          <div class="chip-row">
+            <button class="filter-button active" data-task-filter="all" type="button" data-i18n="tasksFilterAll">Alle</button>
+            <button class="filter-button" data-task-filter="Work" type="button" data-i18n="domainWork">Arbeit</button>
+            <button class="filter-button" data-task-filter="Personal" type="button" data-i18n="domainPersonal">Privat</button>
+            <button class="filter-button" data-task-filter="Other" type="button" data-i18n="domainOther">Sonstiges</button>
+          </div>
           <div class="subsection-title" data-i18n="dueTodayTitle">Due today</div>
           <div id="topTasks" class="task-stack"></div>
           <div class="list-footer">
@@ -158,6 +164,19 @@
             </button>
           </div>
           <div id="allTasks" class="task-stack hidden-list"></div>
+        </section>
+
+        <section class="surface recurring-card reorderable-section" id="recurringSection" data-section-id="recurringSection">
+          <div class="section-head">
+            <h2 data-i18n="recurringTasksTitle">Recurring Tasks</h2>
+            <div class="section-tools">
+              <button class="drag-handle" type="button" draggable="true" data-drag-handle aria-label="Move section">⋮⋮</button>
+            </div>
+          </div>
+          <p class="section-copy" data-i18n="recurringTasksCopy">
+            Hier bearbeitest du den Master-Task und sein Intervall. Die einzelnen Vorkommen erscheinen separat in deiner Taskliste.
+          </p>
+          <div id="recurringList" class="task-stack"></div>
         </section>
 
         <section class="surface parked-card reorderable-section" id="parkedSection" data-section-id="parkedSection">
@@ -195,14 +214,37 @@
                 <input id="quickAddDueDate" type="date" />
               </label>
               <label class="field">
-                <span data-i18n="priorityLabel">Priorität</span>
-                <select id="quickAddImpact">
-                  <option value="1" data-i18n="levelLow">Niedrig</option>
-                  <option value="2" selected data-i18n="levelMedium">Mittel</option>
-                  <option value="3" data-i18n="levelHigh">Hoch</option>
-                </select>
+                <span data-i18n="durationLabel">Dauer</span>
+                <div class="duration-inputs">
+                  <input id="quickAddDurationHours" type="number" min="0" max="23" value="0" />
+                  <span data-i18n="hoursShort">Std</span>
+                  <input id="quickAddDurationMinutes" type="number" min="0" max="59" value="30" step="5" />
+                  <span data-i18n="minutesShort">Min</span>
+                </div>
               </label>
             </div>
+            <details class="optional-details">
+              <summary data-i18n="optionalDetailsLabel">Optionale Details</summary>
+              <div class="optional-details-grid">
+                <label class="field">
+                  <span data-i18n="priorityLabel">Priorität</span>
+                  <select id="quickAddImpact">
+                    <option value="1" data-i18n="levelLow">Niedrig</option>
+                    <option value="2" selected data-i18n="levelMedium">Mittel</option>
+                    <option value="3" data-i18n="levelHigh">Hoch</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span data-i18n="recurringLabel">Recurring Task</span>
+                  <select id="quickAddRecurring">
+                    <option value="none" data-i18n="recurringNone">Kein Intervall</option>
+                    <option value="daily" data-i18n="recurringDaily">Täglich</option>
+                    <option value="weekly" data-i18n="recurringWeekly">Wöchentlich am gleichen Wochentag</option>
+                    <option value="monthly" data-i18n="recurringMonthly">Monatlich am gleichen Datum</option>
+                  </select>
+                </label>
+              </div>
+            </details>
             <button type="submit" class="primary-button" data-i18n="addButton">Hinzufügen</button>
           </form>
         </section>
@@ -255,12 +297,13 @@
               </select>
             </label>
             <label class="field">
-              <span data-i18n="priorityLabel">Priorität</span>
-              <select id="taskImpact">
-                <option value="1" data-i18n="levelLow">Niedrig</option>
-                <option value="2" selected data-i18n="levelMedium">Mittel</option>
-                <option value="3" data-i18n="levelHigh">Hoch</option>
-              </select>
+              <span data-i18n="durationLabel">Dauer</span>
+              <div class="duration-inputs">
+                <input id="taskDurationHours" type="number" min="0" max="23" value="0" />
+                <span data-i18n="hoursShort">Std</span>
+                <input id="taskDurationMinutes" type="number" min="0" max="59" value="30" step="5" />
+                <span data-i18n="minutesShort">Min</span>
+              </div>
             </label>
             <label class="field">
               <span data-i18n="dueDateLabel">Fällig bis</span>
@@ -275,6 +318,28 @@
               </select>
             </label>
           </div>
+          <details class="optional-details">
+            <summary data-i18n="optionalDetailsLabel">Optionale Details</summary>
+            <div class="optional-details-grid">
+              <label class="field">
+                <span data-i18n="priorityLabel">Priorität</span>
+                <select id="taskImpact">
+                  <option value="1" data-i18n="levelLow">Niedrig</option>
+                  <option value="2" selected data-i18n="levelMedium">Mittel</option>
+                  <option value="3" data-i18n="levelHigh">Hoch</option>
+                </select>
+              </label>
+              <label class="field">
+                <span data-i18n="recurringLabel">Recurring Task</span>
+                <select id="taskRecurring">
+                  <option value="none" data-i18n="recurringNone">Kein Intervall</option>
+                  <option value="daily" data-i18n="recurringDaily">Täglich</option>
+                  <option value="weekly" data-i18n="recurringWeekly">Wöchentlich am gleichen Wochentag</option>
+                  <option value="monthly" data-i18n="recurringMonthly">Monatlich am gleichen Datum</option>
+                </select>
+              </label>
+            </div>
+          </details>
           <div class="dialog-actions dialog-spacing">
             <button class="tonal-button" type="button" id="closeCreateDialog" data-i18n="cancelButton">Abbrechen</button>
             <button type="submit" class="primary-button" data-i18n="addButton">Hinzufügen</button>
@@ -306,12 +371,13 @@
               </select>
             </label>
             <label class="field">
-              <span data-i18n="priorityLabel">Priorität</span>
-              <select id="editTaskImpact">
-                <option value="1" data-i18n="levelLow">Niedrig</option>
-                <option value="2" data-i18n="levelMedium">Mittel</option>
-                <option value="3" data-i18n="levelHigh">Hoch</option>
-              </select>
+              <span data-i18n="durationLabel">Dauer</span>
+              <div class="duration-inputs">
+                <input id="editTaskDurationHours" type="number" min="0" max="23" value="0" />
+                <span data-i18n="hoursShort">Std</span>
+                <input id="editTaskDurationMinutes" type="number" min="0" max="59" value="30" step="5" />
+                <span data-i18n="minutesShort">Min</span>
+              </div>
             </label>
             <label class="field">
               <span data-i18n="dueDateLabel">Fällig bis</span>
@@ -326,6 +392,28 @@
               </select>
             </label>
           </div>
+          <details class="optional-details">
+            <summary data-i18n="optionalDetailsLabel">Optionale Details</summary>
+            <div class="optional-details-grid">
+              <label class="field">
+                <span data-i18n="priorityLabel">Priorität</span>
+                <select id="editTaskImpact">
+                  <option value="1" data-i18n="levelLow">Niedrig</option>
+                  <option value="2" data-i18n="levelMedium">Mittel</option>
+                  <option value="3" data-i18n="levelHigh">Hoch</option>
+                </select>
+              </label>
+              <label class="field">
+                <span data-i18n="recurringLabel">Recurring Task</span>
+                <select id="editTaskRecurring">
+                  <option value="none" data-i18n="recurringNone">Kein Intervall</option>
+                  <option value="daily" data-i18n="recurringDaily">Täglich</option>
+                  <option value="weekly" data-i18n="recurringWeekly">Wöchentlich am gleichen Wochentag</option>
+                  <option value="monthly" data-i18n="recurringMonthly">Monatlich am gleichen Datum</option>
+                </select>
+              </label>
+            </div>
+          </details>
           <div class="dialog-actions dialog-spacing">
             <button class="action-button action-delete" type="button" id="deleteTaskButton" data-i18n="deleteButton">Löschen</button>
             <button class="tonal-button" type="button" id="closeEditDialog" data-i18n="cancelButton">Abbrechen</button>
