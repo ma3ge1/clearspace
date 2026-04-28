@@ -428,7 +428,7 @@ function setSessionCookie(res, token) {
     "HttpOnly",
     "SameSite=Lax",
   ];
-  if (process.env.NODE_ENV === "production") {
+  if (process.env.MINFOG_SECURE_COOKIE === "true") {
     parts.push("Secure");
   }
   res.setHeader("Set-Cookie", parts.join("; "));
