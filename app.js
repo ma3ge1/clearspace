@@ -1,529 +1,881 @@
-const STORAGE_KEY = "klarraum-v1";
+const STORAGE_KEY = "mindfog-v4";
+const DEFAULT_SECTION_ORDER = [
+  "dashboardSection",
+  "contextSection",
+  "tasksSection",
+  "parkedSection",
+  "quickAddSection",
+  "doneSection",
+];
+
+const translations = {
+  de: {
+    heroIntro: "Erfasse Tasks schnell, erkenne was heute zählt und mache Priorität sichtbar.",
+    dashboardTitle: "Dashboard",
+    resetDay: "Tag zurücksetzen",
+    contextTitle: "Arbeitsmodus",
+    contextCopy: "Der Modus verändert nur die Reihenfolge deiner Tasks.",
+    modeLabel: "Modus",
+    modeHint: "Welche Art von Sortierung brauchst du heute?",
+    modeStable: "Stabiler Tag",
+    modeStableDesc: "Tasks nach Fälligkeit anzeigen, älteste zuerst",
+    modeCatchup: "Aufholen",
+    modeCatchupDesc: "Überfällige und fällige Tasks zuerst anzeigen",
+    modeChaos: "Überforderter Tag",
+    modeChaosDesc: "Einfachere Tasks zuerst, ohne Fälligkeiten zu verlieren",
+    createTitle: "Task erstellen",
+    capturePrompt: "Was ist gerade in deinem Kopf?",
+    descriptionLabel: "Beschreibung",
+    domainLabel: "Bereich",
+    domainWork: "Arbeit",
+    domainPersonal: "Privat",
+    domainOther: "Sonstiges",
+    priorityLabel: "Priorität",
+    dueDateLabel: "Fällig bis",
+    statusLabel: "Status",
+    statusOpen: "Offen",
+    statusPark: "Parken",
+    statusDone: "Erledigt",
+    levelLow: "Niedrig",
+    levelMedium: "Mittel",
+    levelHigh: "Hoch",
+    addButton: "Hinzufügen",
+    cancelButton: "Abbrechen",
+    saveButton: "Speichern",
+    tasksTitle: "Tasks",
+    tasksCopy: "Die wichtigsten Tasks stehen oben. Alles Weitere bleibt direkt darunter erreichbar.",
+    dueTodayTitle: "Due today",
+    showAllTasks: "Alle Tasks ansehen",
+    hideAllTasks: "Zusätzliche Tasks ausblenden",
+    parkedTitle: "Geparkte Tasks",
+    quickAddTitle: "Task hinzufügen",
+    quickAddCopy: "Erfasse schnell einen neuen Task direkt auf dem Board.",
+    doneTitle: "Erledigt",
+    doneAll: "Gesamt",
+    doneToday: "Heute",
+    doneWeek: "Diese Woche",
+    summaryActive: "Aktive Tasks",
+    summaryTop: "Due today",
+    summaryParked: "Geparkte Tasks",
+    pointsToday: "Today's score",
+    pointsSuffix: "Punkte",
+    scoreLabel: "Score",
+    scoreExplainer:
+      "Der Score ergibt sich aus Priorität und Fälligkeit. Höhere Priorität erhöht den Score deutlich, nahe oder überfällige Tasks bekommen zusätzliche Punkte.",
+    scoreInfo:
+      "Der Score kombiniert Priorität und Fälligkeit. Im Modus Überforderter Tag werden die kleinsten Scores zuerst gezeigt, damit du mit einfacheren Tasks starten kannst.",
+    modeInfo:
+      "Stabiler Tag sortiert nach Fälligkeit. Aufholen priorisiert zuerst Überfälliges und danach Fälliges. Überforderter Tag zeigt die einfachsten Tasks zuerst, berücksichtigt aber weiterhin Fälligkeiten.",
+    supportStableTitle: "Heute zählt eine ruhige Standard-Sortierung",
+    supportStableBody:
+      "Mindfog zeigt deine Tasks in normaler Reihenfolge nach Fälligkeit, damit du strukturiert durch den Tag gehen kannst.",
+    supportCatchupTitle: "Heute werden fällige Tasks nach vorne gezogen",
+    supportCatchupBody:
+      "Mindfog priorisiert zuerst überfällige Tasks und danach alle fälligen Tasks, jeweils mit älteren Daten zuerst.",
+    supportChaosTitle: "Heute starten die einfachsten Tasks vorne",
+    supportChaosBody:
+      "Mindfog zeigt die kleinsten Scores zuerst und achtet trotzdem darauf, dass Überfälliges sichtbar bleibt.",
+    topBadge: "Due today",
+    topEmpty: "Noch keine aktiven Tasks vorhanden.",
+    taskEmpty: "Noch keine weiteren aktiven Tasks vorhanden.",
+    parkedEmpty: "Noch keine geparkten Tasks vorhanden.",
+    doneEmpty: "Noch keine erledigten Tasks in dieser Ansicht.",
+    doneOn: "Erledigt",
+    reactivateButton: "Aktivieren",
+    statusEdit: "Bearbeiten",
+    editTitle: "Task bearbeiten",
+    authTitle: "Bei Mindfog anmelden",
+    authIntro: "Melde dich an, damit deine Tasks sicher gespeichert und auf allen Geräten verfügbar sind.",
+    setupTitle: "Ersten Account erstellen",
+    setupHint: "Nutze mindestens 8 Zeichen. Dies ist dein erster Mindfog-Account.",
+    setupButton: "Account erstellen",
+    loginTitle: "Anmelden",
+    loginButton: "Einloggen",
+    logoutButton: "Logout",
+    usernameLabel: "Benutzername",
+    passwordLabel: "Passwort",
+    authErrorDefault: "Das hat gerade nicht funktioniert. Bitte prüfe deine Eingaben.",
+    authErrorInvalid: "Benutzername oder Passwort sind nicht korrekt.",
+    authErrorShortPassword: "Das Passwort sollte mindestens 8 Zeichen haben.",
+    authErrorSetupDone: "Ein Account existiert bereits. Bitte melde dich an.",
+    authErrorRequired: "Bitte fülle Benutzername und Passwort aus.",
+  },
+  en: {
+    heroIntro: "Capture tasks quickly, see what matters today, and turn priority into momentum.",
+    dashboardTitle: "Dashboard",
+    resetDay: "Reset day",
+    contextTitle: "Work mode",
+    contextCopy: "Mode only changes the order of your tasks.",
+    modeLabel: "Mode",
+    modeHint: "What kind of ordering do you need today?",
+    modeStable: "Stable day",
+    modeStableDesc: "Show tasks by due date, oldest first",
+    modeCatchup: "Catch-up",
+    modeCatchupDesc: "Prioritize overdue and due tasks first",
+    modeChaos: "Overloaded day",
+    modeChaosDesc: "Show easier tasks first without losing due items",
+    createTitle: "Create task",
+    capturePrompt: "What is on your mind right now?",
+    descriptionLabel: "Description",
+    domainLabel: "Area",
+    domainWork: "Work",
+    domainPersonal: "Personal",
+    domainOther: "Other",
+    priorityLabel: "Priority",
+    dueDateLabel: "Due date",
+    statusLabel: "Status",
+    statusOpen: "Open",
+    statusPark: "Park",
+    statusDone: "Done",
+    levelLow: "Low",
+    levelMedium: "Medium",
+    levelHigh: "High",
+    addButton: "Add",
+    cancelButton: "Cancel",
+    saveButton: "Save",
+    tasksTitle: "Tasks",
+    tasksCopy: "The most relevant tasks stay at the top. Everything else remains directly below.",
+    dueTodayTitle: "Due today",
+    showAllTasks: "Show all tasks",
+    hideAllTasks: "Hide additional tasks",
+    parkedTitle: "Parked tasks",
+    quickAddTitle: "Add task",
+    quickAddCopy: "Capture a new task directly on the board.",
+    doneTitle: "Completed",
+    doneAll: "All time",
+    doneToday: "Today",
+    doneWeek: "This week",
+    summaryActive: "Active tasks",
+    summaryTop: "Due today",
+    summaryParked: "Parked tasks",
+    pointsToday: "Today's score",
+    pointsSuffix: "points",
+    scoreLabel: "Score",
+    scoreExplainer:
+      "Score is based on priority and due date. Higher priority raises the score, and tasks that are due soon or overdue gain extra points.",
+    scoreInfo:
+      "Score combines priority and due date. In overloaded mode the smallest scores appear first so you can start with easier tasks.",
+    modeInfo:
+      "Stable day sorts by due date. Catch-up prioritizes overdue tasks first and then due tasks. Overloaded day shows the easiest tasks first while still respecting due items.",
+    supportStableTitle: "Today follows a calm default ordering",
+    supportStableBody:
+      "Mindfog shows your tasks in a normal due-date order so you can move through the day in a structured way.",
+    supportCatchupTitle: "Today due tasks move to the front",
+    supportCatchupBody:
+      "Mindfog prioritizes overdue tasks first and then due tasks, always with older dates first.",
+    supportChaosTitle: "Today the easiest tasks come first",
+    supportChaosBody:
+      "Mindfog shows the smallest scores first while keeping overdue work visible.",
+    topBadge: "Due today",
+    topEmpty: "No active tasks yet.",
+    taskEmpty: "No additional active tasks yet.",
+    parkedEmpty: "No parked tasks yet.",
+    doneEmpty: "No completed tasks in this view yet.",
+    doneOn: "Completed",
+    reactivateButton: "Activate",
+    statusEdit: "Edit",
+    editTitle: "Edit task",
+    authTitle: "Sign in to Mindfog",
+    authIntro: "Sign in so your tasks are stored securely and available across devices.",
+    setupTitle: "Create the first account",
+    setupHint: "Use at least 8 characters. This becomes your first Mindfog account.",
+    setupButton: "Create account",
+    loginTitle: "Sign in",
+    loginButton: "Log in",
+    logoutButton: "Logout",
+    usernameLabel: "Username",
+    passwordLabel: "Password",
+    authErrorDefault: "That did not work. Please check your input.",
+    authErrorInvalid: "Username or password is not correct.",
+    authErrorShortPassword: "The password should be at least 8 characters long.",
+    authErrorSetupDone: "An account already exists. Please sign in.",
+    authErrorRequired: "Please fill in username and password.",
+  },
+};
 
 const defaultState = {
-  settings: {
-    energy: 2,
-    focus: 2,
-    timeWindow: 45,
-    dayMode: "stabil",
-  },
-  tasks: [
-    {
-      id: crypto.randomUUID(),
-      title: "Projektangebot beantworten",
-      domain: "Arbeit",
-      type: "task",
-      impact: 3,
-      urgency: 3,
-      effort: 30,
-      friction: 2,
-      nextStep: "Mail öffnen und drei Kernpunkte als Antwort notieren.",
-      status: "active",
-      createdAt: Date.now() - 4000,
-      completedAt: null,
-    },
-    {
-      id: crypto.randomUUID(),
-      title: "Arzttermin vereinbaren",
-      domain: "Privat",
-      type: "task",
-      impact: 3,
-      urgency: 2,
-      effort: 15,
-      friction: 1,
-      nextStep: "Praxisnummer öffnen und direkt anrufen.",
-      status: "active",
-      createdAt: Date.now() - 3000,
-      completedAt: null,
-    },
-    {
-      id: crypto.randomUUID(),
-      title: "Neue Produktidee für ADHS-Coach notieren",
-      domain: "Idee",
-      type: "idea",
-      impact: 2,
-      urgency: 1,
-      effort: 10,
-      friction: 1,
-      nextStep: "Nur drei Stichworte festhalten.",
-      status: "parked",
-      createdAt: Date.now() - 2000,
-      completedAt: null,
-    },
-  ],
+  language: "de",
+  settings: { dayMode: "stabil", sectionOrder: [...DEFAULT_SECTION_ORDER] },
+  tasks: [],
 };
 
 const appState = loadState();
-let activeFilter = "all";
+let doneFilter = "all";
+let showAllTasks = false;
+let currentUser = null;
+let draggedSectionId = null;
 
-const taskForm = document.getElementById("taskForm");
-const taskList = document.getElementById("taskList");
-const topThree = document.getElementById("topThree");
-const focusAction = document.getElementById("focusAction");
-const ideaList = document.getElementById("ideaList");
-const doneList = document.getElementById("doneList");
+const authShell = document.getElementById("authShell");
+const authError = document.getElementById("authError");
+const setupForm = document.getElementById("setupForm");
+const loginForm = document.getElementById("loginForm");
+const logoutButton = document.getElementById("logoutButton");
 const summaryGrid = document.getElementById("summaryGrid");
+const pointsGrid = document.getElementById("pointsGrid");
 const supportNote = document.getElementById("supportNote");
-const resetDayButton = document.getElementById("resetDayButton");
+const topTasks = document.getElementById("topTasks");
+const allTasks = document.getElementById("allTasks");
+const parkedList = document.getElementById("parkedList");
+const quickAddForm = document.getElementById("quickAddForm");
+const doneList = document.getElementById("doneList");
+const createDialog = document.getElementById("createDialog");
+const taskForm = document.getElementById("taskForm");
+const editDialog = document.getElementById("editDialog");
+const editForm = document.getElementById("editForm");
+const tooltip = document.getElementById("tooltip");
+const mainGrid = document.getElementById("mainGrid");
 
-const energyLevel = document.getElementById("energyLevel");
-const focusState = document.getElementById("focusState");
-const timeWindow = document.getElementById("timeWindow");
-const dayMode = document.getElementById("dayMode");
+function t(key) {
+  return translations[appState.language][key] || key;
+}
 
-const inputMap = {
-  energy: energyLevel,
-  focus: focusState,
-  timeWindow,
-  dayMode,
-};
-
-const domainNextStep = {
-  Arbeit: "Dokument oder Mail öffnen und den ersten konkreten Satz schreiben.",
-  Privat: "Kontakt, App oder Website öffnen und die Handlung sofort starten.",
-  Idee: "Nur den Kern notieren und nicht weiter ausbauen.",
-};
-
-const supportMessages = {
-  chaos: "Heute ist ein Schutzmodus sinnvoll. Kleine, klare Aufgaben gewinnen vor grossen Baustellen.",
-  stabil: "Heute darfst du Wirkung priorisieren, solange der Einstieg klein bleibt.",
-  catchup: "Heute lohnt sich ein Mix aus einem wichtigen Thema und zwei schnellen Entlastungen.",
-};
+function todayString() {
+  const now = new Date();
+  const month = `${now.getMonth() + 1}`.padStart(2, "0");
+  const day = `${now.getDate()}`.padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
 
 function loadState() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) {
-      return structuredClone(defaultState);
-    }
-
+    if (!stored) return structuredClone(defaultState);
     const parsed = JSON.parse(stored);
     return {
-      settings: { ...defaultState.settings, ...parsed.settings },
-      tasks: Array.isArray(parsed.tasks) ? parsed.tasks : defaultState.tasks,
+      language: parsed.language || "de",
+      settings: {
+        ...defaultState.settings,
+        ...parsed.settings,
+        sectionOrder: sanitizeSectionOrder(parsed.settings?.sectionOrder),
+      },
+      tasks: [],
     };
-  } catch (error) {
-    console.warn("State konnte nicht geladen werden:", error);
+  } catch {
     return structuredClone(defaultState);
   }
 }
 
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+  const payload = {
+    language: appState.language,
+    settings: {
+      ...appState.settings,
+      sectionOrder: sanitizeSectionOrder(appState.settings.sectionOrder),
+    },
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 }
 
-function syncSettingsToInputs() {
-  energyLevel.value = String(appState.settings.energy);
-  focusState.value = String(appState.settings.focus);
-  timeWindow.value = String(appState.settings.timeWindow);
-  dayMode.value = appState.settings.dayMode;
+function sanitizeSectionOrder(order) {
+  const candidate = Array.isArray(order) ? order.filter((id) => DEFAULT_SECTION_ORDER.includes(id)) : [];
+  const merged = [...candidate];
+  DEFAULT_SECTION_ORDER.forEach((id) => {
+    if (!merged.includes(id)) merged.push(id);
+  });
+  return merged;
 }
 
-function updateSettings() {
-  appState.settings.energy = Number(energyLevel.value);
-  appState.settings.focus = Number(focusState.value);
-  appState.settings.timeWindow = Number(timeWindow.value);
-  appState.settings.dayMode = dayMode.value;
+function setLanguage(language) {
+  appState.language = language;
+  document.documentElement.lang = language;
   saveState();
+  applyTranslations();
   render();
 }
 
-function getActiveTasks() {
-  return appState.tasks.filter((task) => task.status === "active");
+function applyTranslations() {
+  document.querySelectorAll("[data-i18n]").forEach((node) => {
+    node.textContent = t(node.dataset.i18n);
+  });
+  document.title = "Mindfog";
+  document.getElementById("langDe").classList.toggle("active", appState.language === "de");
+  document.getElementById("langEn").classList.toggle("active", appState.language === "en");
 }
 
-function getParkedIdeas() {
-  return appState.tasks.filter(
-    (task) => task.status === "parked" || task.type === "idea",
-  );
+function renderSectionOrder() {
+  const order = sanitizeSectionOrder(appState.settings.sectionOrder);
+  appState.settings.sectionOrder = order;
+  order.forEach((sectionId) => {
+    const section = document.getElementById(sectionId);
+    if (section) mainGrid.appendChild(section);
+  });
+  const explainer = document.getElementById("scoreExplainer");
+  if (explainer) mainGrid.appendChild(explainer);
 }
 
-function getCompletedTasks() {
-  return appState.tasks
-    .filter((task) => task.status === "done")
-    .sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
+function dueWeight(dueDate) {
+  if (!dueDate) return 999999999;
+  return new Date(dueDate).getTime();
 }
 
-function calculateScore(task) {
-  const { energy, focus, timeWindow: availableTime, dayMode: mode } = appState.settings;
-  const fitsTime = task.effort <= availableTime ? 3 : -2;
-  const fitsEnergy = energy === 1 && task.effort > 30 ? -2 : energy === 3 ? 1 : 0;
-  const fitsFocus = focus === 1 && task.friction > 2 ? -2 : focus === 3 ? 1 : 0;
-  const modeModifier =
-    mode === "chaos"
-      ? task.effort <= 30
-        ? 2
-        : -2
-      : mode === "catchup"
-        ? task.urgency >= 2
-          ? 1
-          : 0
-        : task.impact >= 3
-          ? 1
-          : 0;
-  const ideaPenalty = task.type === "idea" ? -4 : 0;
-  const frictionPenalty = task.friction === 3 ? -1 : 0;
-
-  return (
-    task.impact * 2 +
-    task.urgency * 2 +
-    fitsTime +
-    fitsEnergy +
-    fitsFocus +
-    modeModifier +
-    ideaPenalty +
-    frictionPenalty
-  );
+function scoreTask(task) {
+  let score = task.impact * 5;
+  const dueDiff = Math.ceil((dueWeight(task.dueDate) - Date.now()) / 86400000);
+  if (dueDiff <= 0) score += 8;
+  else if (dueDiff <= 2) score += 5;
+  else if (dueDiff <= 7) score += 2;
+  return score;
 }
 
-function sortByPriority(tasks) {
-  return [...tasks]
-    .map((task) => ({ ...task, score: calculateScore(task) }))
-    .sort((a, b) => b.score - a.score || a.effort - b.effort);
+function withScore(task) {
+  return { ...task, score: scoreTask(task) };
+}
+
+function sortActiveTasks(tasks) {
+  const mode = appState.settings.dayMode;
+  if (mode === "catchup") {
+    return [...tasks].sort((a, b) => dueWeight(a.dueDate) - dueWeight(b.dueDate) || a.createdAt - b.createdAt);
+  }
+
+  if (mode === "chaos") {
+    return [...tasks].sort((a, b) => {
+      const aOverdue = dueWeight(a.dueDate) < Date.now() ? -1000 : 0;
+      const bOverdue = dueWeight(b.dueDate) < Date.now() ? -1000 : 0;
+      return (a.score + aOverdue) - (b.score + bOverdue) || dueWeight(a.dueDate) - dueWeight(b.dueDate);
+    });
+  }
+
+  return [...tasks].sort((a, b) => dueWeight(a.dueDate) - dueWeight(b.dueDate) || a.createdAt - b.createdAt);
+}
+
+function getTasksByStatus(status) {
+  return appState.tasks.filter((task) => task.status === status).map(withScore);
+}
+
+function activeTasks() {
+  return sortActiveTasks(getTasksByStatus("active"));
+}
+
+function topThreeTasks() {
+  return activeTasks().slice(0, 3);
+}
+
+function remainingTasks() {
+  return activeTasks().slice(3);
+}
+
+function startOfToday() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+}
+
+function scoreSumSince(timestamp) {
+  return getTasksByStatus("done")
+    .filter((task) => (task.completedAt || 0) >= timestamp)
+    .reduce((sum, task) => sum + task.score, 0);
 }
 
 function createEmptyState(text) {
-  const empty = document.createElement("div");
-  empty.className = "empty-state";
-  empty.textContent = text;
-  return empty;
+  const div = document.createElement("div");
+  div.className = "empty-state";
+  div.textContent = text;
+  return div;
 }
 
-function renderSummary() {
-  const activeTasks = getActiveTasks();
-  const topTasks = sortByPriority(activeTasks).slice(0, 3);
-  const parkedIdeas = appState.tasks.filter((task) => task.status === "parked");
-  const completed = getCompletedTasks();
-
+function renderDashboard() {
   const cards = [
-    { label: "Aktive Aufgaben", value: activeTasks.length, tone: "warm" },
-    { label: "Top-3 heute", value: topTasks.length, tone: "green" },
-    { label: "Geparkte Ideen", value: parkedIdeas.length, tone: "gold" },
-    { label: "Erledigt", value: completed.length, tone: "ink" },
+    { label: t("summaryActive"), value: activeTasks().length, target: "tasksSection" },
+    { label: t("summaryTop"), value: topThreeTasks().length, target: "tasksSection" },
+    { label: t("summaryParked"), value: getTasksByStatus("parked").length, target: "parkedSection" },
+    { label: t("pointsToday"), value: scoreSumSince(startOfToday()), suffix: t("pointsSuffix"), score: true },
   ];
 
   summaryGrid.innerHTML = "";
-
   cards.forEach((card) => {
-    const item = document.createElement("article");
-    item.className = `summary-item tone-${card.tone}`;
-    item.innerHTML = `
-      <span>${card.label}</span>
-      <strong>${card.value}</strong>
-    `;
-    summaryGrid.appendChild(item);
+    const isClickable = Boolean(card.target);
+    const element = document.createElement(isClickable ? "button" : "article");
+    if (isClickable) {
+      element.type = "button";
+      element.dataset.target = card.target;
+    }
+    element.className = `metric-card${card.score ? " score-card" : ""}`;
+    element.innerHTML = `<span class="metric-label">${card.label}</span><strong>${card.value}</strong>${
+      card.suffix ? `<small>${card.suffix}</small>` : ""
+    }`;
+    summaryGrid.appendChild(element);
   });
 
-  supportNote.textContent = supportMessages[appState.settings.dayMode];
+  pointsGrid.innerHTML = "";
+
+  const copy = {
+    stabil: { title: t("supportStableTitle"), body: t("supportStableBody"), tone: "support-stable" },
+    catchup: { title: t("supportCatchupTitle"), body: t("supportCatchupBody"), tone: "support-catchup" },
+    chaos: { title: t("supportChaosTitle"), body: t("supportChaosBody"), tone: "support-chaos" },
+  }[appState.settings.dayMode];
+
+  supportNote.className = `support-note ${copy.tone}`;
+  supportNote.innerHTML = `<strong>${copy.title}</strong><p>${copy.body}</p>`;
 }
 
-function renderTopThree() {
-  const ranked = sortByPriority(getActiveTasks()).slice(0, 3);
-  topThree.innerHTML = "";
+function buildTaskCard(task, options = {}) {
+  const { top = false, done = false, parked = false } = options;
+  const article = document.createElement("article");
+  article.className = `task-card${top ? " top-card" : ""}`;
+  const dueText = task.dueDate
+    ? new Date(task.dueDate).toLocaleDateString(appState.language === "de" ? "de-CH" : "en-US")
+    : "";
+  const description = task.description ? `<p class="task-description">${escapeHtml(task.description)}</p>` : "";
 
-  if (!ranked.length) {
-    topThree.appendChild(
-      createEmptyState("Noch keine aktiven Aufgaben. Starte mit einem kurzen Brain Dump."),
-    );
-    return;
-  }
-
-  ranked.forEach((task, index) => {
-    const item = document.createElement("article");
-    item.className = "top-item";
-    item.innerHTML = `
-      <div class="top-rank">
-        <span class="rank-number">${index + 1}</span>
-        <span class="badge">${task.domain}</span>
-      </div>
-      <h3>${task.title}</h3>
-      <p class="card-copy">Score ${task.score} · ${task.effort} Minuten · ${task.type === "worry" ? "offene Schleife" : "aktive Aufgabe"}</p>
-      <p class="mini-step">${task.nextStep || domainNextStep[task.domain]}</p>
-      <div class="action-row">
-        <button class="secondary-button" type="button" data-action="done" data-id="${task.id}">
-          Erledigt
-        </button>
-        <button class="secondary-button" type="button" data-action="park" data-id="${task.id}">
-          Parken
-        </button>
-      </div>
+  let actions = "";
+  if (done) {
+    actions = `<button class="action-button action-activate" type="button" data-action="activate" data-id="${task.id}">${t("reactivateButton")}</button>`;
+  } else if (parked) {
+    actions = `
+      <button class="action-button action-activate" type="button" data-action="activate" data-id="${task.id}">${t("statusOpen")}</button>
+      <button class="action-button action-edit" type="button" data-action="edit" data-id="${task.id}">${t("statusEdit")}</button>
     `;
-    topThree.appendChild(item);
-  });
-}
-
-function renderFocusAction() {
-  const [nextTask] = sortByPriority(getActiveTasks());
-  focusAction.innerHTML = "";
-
-  if (!nextTask) {
-    focusAction.appendChild(
-      createEmptyState("Sobald eine Aufgabe aktiv ist, erscheint hier dein Einstieg."),
-    );
-    return;
+  } else {
+    actions = `
+      <button class="action-button action-done" type="button" data-action="done" data-id="${task.id}">${t("statusDone")}</button>
+      <button class="action-button action-park" type="button" data-action="park" data-id="${task.id}">${t("statusPark")}</button>
+      <button class="action-button action-edit" type="button" data-action="edit" data-id="${task.id}">${t("statusEdit")}</button>
+    `;
   }
 
-  const panel = document.createElement("article");
-  panel.className = "focus-panel";
-  panel.innerHTML = `
-    <div class="focus-meta">
-      <span class="badge">Jetzt anfangen mit</span>
-      <span class="pill">${nextTask.effort} Minuten Block</span>
+  const detailParts = [];
+  if (dueText) detailParts.push(`<span class="task-detail">${dueText}</span>`);
+  if (done && task.completedAt) {
+    detailParts.push(
+      `<span class="task-detail">${t("doneOn")} ${new Date(task.completedAt).toLocaleDateString(appState.language === "de" ? "de-CH" : "en-US")}</span>`,
+    );
+  }
+
+  article.innerHTML = `
+    <div class="task-card-top">
+      <div class="task-main">
+        ${top ? `<span class="task-chip">${t("topBadge")}</span>` : ""}
+        <strong>${escapeHtml(task.title)}</strong>
+        ${description}
+      </div>
     </div>
-    <h3>${nextTask.title}</h3>
-    <p>${nextTask.nextStep || domainNextStep[nextTask.domain]}</p>
-    <div class="focus-hint">
-      ${appState.settings.dayMode === "chaos"
-        ? "Wenn du blockierst: Stell einen 5-Minuten-Timer und erlaube dir, danach zu stoppen."
-        : "Wenn du blockierst: Fang absichtlich unperfekt an und arbeite nur bis zum ersten Teilziel."}
+    <div class="task-card-bottom">
+      <div class="task-details">${detailParts.join("")}</div>
+      <div class="task-actions">
+        <div class="score-pill">
+          <small>${t("scoreLabel")}</small>
+          <span class="score-value">+${task.score}</span>
+        </div>
+        ${actions}
+      </div>
     </div>
   `;
-  focusAction.appendChild(panel);
+  return article;
 }
 
-function renderTaskList() {
-  const activeTasks = getActiveTasks();
-  const filtered =
-    activeFilter === "all"
-      ? activeTasks
-      : activeTasks.filter((task) => task.domain === activeFilter);
-  const ranked = sortByPriority(filtered);
+function renderTasks() {
+  topTasks.innerHTML = "";
+  allTasks.innerHTML = "";
+  allTasks.classList.toggle("hidden-list", !showAllTasks);
+  document.getElementById("showAllTasksButton").textContent = showAllTasks ? t("hideAllTasks") : t("showAllTasks");
 
-  taskList.innerHTML = "";
+  const top = topThreeTasks();
+  const rest = remainingTasks();
 
-  if (!ranked.length) {
-    taskList.appendChild(createEmptyState("Keine Aufgaben in diesem Filter."));
-    return;
-  }
+  if (!top.length) topTasks.appendChild(createEmptyState(t("topEmpty")));
+  else top.forEach((task) => topTasks.appendChild(buildTaskCard(task, { top: true })));
 
-  ranked.forEach((task) => {
-    const item = document.createElement("article");
-    item.className = "task-item";
-    item.innerHTML = `
-      <div class="task-topline">
-        <strong>${task.title}</strong>
-        <span class="score">Score ${task.score}</span>
-      </div>
-      <div class="task-meta">
-        <span class="badge">${task.domain}</span>
-        <span class="pill">${formatType(task.type)}</span>
-        <span class="pill">Wirkung ${task.impact}/3</span>
-        <span class="pill">Dringlichkeit ${task.urgency}/3</span>
-        <span class="pill">${task.effort} Min</span>
-        <span class="pill">Start-Hürde ${task.friction}/3</span>
-      </div>
-      <p class="task-note">${task.nextStep || domainNextStep[task.domain]}</p>
-      <div class="action-row">
-        <button class="secondary-button" type="button" data-action="done" data-id="${task.id}">
-          Erledigt
-        </button>
-        <button class="secondary-button" type="button" data-action="park" data-id="${task.id}">
-          Parken
-        </button>
-        <button class="secondary-button" type="button" data-action="boost" data-id="${task.id}">
-          Heute wichtiger
-        </button>
-      </div>
-    `;
-    taskList.appendChild(item);
-  });
+  if (!showAllTasks) return;
+  if (!rest.length) allTasks.appendChild(createEmptyState(t("taskEmpty")));
+  else rest.forEach((task) => allTasks.appendChild(buildTaskCard(task)));
 }
 
-function renderIdeas() {
-  const ideas = getParkedIdeas().sort((a, b) => b.createdAt - a.createdAt);
-  ideaList.innerHTML = "";
-
-  if (!ideas.length) {
-    ideaList.appendChild(createEmptyState("Keine geparkten Ideen vorhanden."));
+function renderParked() {
+  const parked = getTasksByStatus("parked");
+  parkedList.innerHTML = "";
+  if (!parked.length) {
+    parkedList.appendChild(createEmptyState(t("parkedEmpty")));
     return;
   }
-
-  ideas.forEach((idea) => {
-    const item = document.createElement("article");
-    item.className = "stack-item";
-    item.innerHTML = `
-      <div class="task-topline">
-        <strong>${idea.title}</strong>
-        <span class="badge">${idea.domain}</span>
-      </div>
-      <p class="task-note">${idea.nextStep || "Idee bleibt geparkt, bis du bewusst Zeit dafür reservierst."}</p>
-      <div class="action-row">
-        <button class="secondary-button" type="button" data-action="activate" data-id="${idea.id}">
-          Aktivieren
-        </button>
-      </div>
-    `;
-    ideaList.appendChild(item);
-  });
+  parked.forEach((task) => parkedList.appendChild(buildTaskCard(task, { parked: true })));
 }
 
 function renderDone() {
-  const completed = getCompletedTasks();
+  let done = getTasksByStatus("done").sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
+  if (doneFilter === "today") done = done.filter((task) => (task.completedAt || 0) >= startOfToday());
+  if (doneFilter === "week") done = done.filter((task) => (task.completedAt || 0) >= startOfToday() - 6 * 86400000);
   doneList.innerHTML = "";
-
-  if (!completed.length) {
-    doneList.appendChild(createEmptyState("Noch nichts erledigt. Klein anfangen zählt."));
+  if (!done.length) {
+    doneList.appendChild(createEmptyState(t("doneEmpty")));
     return;
   }
-
-  completed.forEach((task) => {
-    const item = document.createElement("article");
-    item.className = "stack-item done-item";
-    item.innerHTML = `
-      <div class="task-topline">
-        <strong>${task.title}</strong>
-        <span class="pill">${task.domain}</span>
-      </div>
-    `;
-    doneList.appendChild(item);
-  });
-}
-
-function renderFilterButtons() {
-  document.querySelectorAll(".filter-button").forEach((button) => {
-    button.classList.toggle("active", button.dataset.filter === activeFilter);
-  });
+  done.forEach((task) => doneList.appendChild(buildTaskCard(task, { done: true })));
 }
 
 function render() {
-  renderSummary();
-  renderTopThree();
-  renderFocusAction();
-  renderTaskList();
-  renderIdeas();
+  renderSectionOrder();
+  if (!currentUser) return;
+  renderDashboard();
+  renderTasks();
+  renderParked();
   renderDone();
-  renderFilterButtons();
 }
 
-function formatType(type) {
-  if (type === "idea") {
-    return "Idee";
+function setAuthenticatedState(user) {
+  currentUser = user;
+  document.querySelectorAll(".topbar, .main-grid, .fab").forEach((node) => {
+    node.classList.toggle("hidden-auth", !user);
+  });
+  logoutButton.classList.toggle("hidden-auth", !user);
+  authShell.classList.toggle("hidden-auth", Boolean(user));
+  if (user) {
+    authError.textContent = "";
   }
-
-  if (type === "worry") {
-    return "Offene Schleife";
-  }
-
-  return "Aufgabe";
 }
 
-function addTask(event) {
+function showAuthMode(mode) {
+  setupForm.classList.toggle("hidden-auth", mode !== "setup");
+  loginForm.classList.toggle("hidden-auth", mode !== "login");
+}
+
+function showAuthError(key) {
+  authError.textContent = t(key);
+}
+
+async function api(path, options = {}) {
+  const response = await fetch(path, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+    credentials: "same-origin",
+    ...options,
+  });
+
+  if (response.status === 204) {
+    return null;
+  }
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(data.error || "request_failed");
+    error.code = data.error || "request_failed";
+    throw error;
+  }
+  return data;
+}
+
+async function refreshTasks() {
+  const data = await api("/api/tasks");
+  appState.tasks = Array.isArray(data.tasks) ? data.tasks : [];
+  render();
+}
+
+async function bootstrapSession() {
+  try {
+    const session = await api("/api/session", { headers: {} });
+    if (session.authenticated) {
+      setAuthenticatedState(session.user);
+      await refreshTasks();
+      return;
+    }
+    setAuthenticatedState(null);
+    showAuthMode(session.setupRequired ? "setup" : "login");
+  } catch {
+    setAuthenticatedState(null);
+    showAuthMode("login");
+    showAuthError("authErrorDefault");
+  }
+}
+
+function statusFromValue(value) {
+  if (value === "done") return "done";
+  if (value === "parked") return "parked";
+  return "active";
+}
+
+async function createTask(payload) {
+  const data = await api("/api/tasks", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  appState.tasks.unshift(data.task);
+  render();
+}
+
+async function patchTask(id, payload) {
+  const data = await api(`/api/tasks/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+  appState.tasks = appState.tasks.map((task) => (task.id === id ? data.task : task));
+  render();
+}
+
+async function addTask(event) {
   event.preventDefault();
+  const title = document.getElementById("taskTitle").value.trim();
+  if (!title) return;
 
-  const titleInput = document.getElementById("taskTitle");
-  const title = titleInput.value.trim();
-  if (!title) {
-    return;
-  }
-
-  const type = document.getElementById("taskType").value;
-  const domain = document.getElementById("taskDomain").value;
-
-  appState.tasks.unshift({
-    id: crypto.randomUUID(),
+  await createTask({
     title,
-    domain,
-    type,
+    description: document.getElementById("taskDescription").value.trim(),
+    domain: document.getElementById("taskDomain").value,
     impact: Number(document.getElementById("taskImpact").value),
-    urgency: Number(document.getElementById("taskUrgency").value),
-    effort: Number(document.getElementById("taskEffort").value),
-    friction: Number(document.getElementById("taskFriction").value),
-    nextStep: document.getElementById("taskNextStep").value.trim(),
-    status: type === "idea" ? "parked" : "active",
-    createdAt: Date.now(),
-    completedAt: null,
+    dueDate: document.getElementById("taskDueDate").value || todayString(),
+    status: statusFromValue(document.getElementById("taskStatus").value),
   });
 
   taskForm.reset();
-  document.getElementById("taskImpact").value = "2";
-  document.getElementById("taskUrgency").value = "2";
-  document.getElementById("taskEffort").value = "30";
-  document.getElementById("taskFriction").value = "2";
-  document.getElementById("taskType").value = "task";
-  document.getElementById("taskDomain").value = domain;
-
-  saveState();
-  render();
-  titleInput.focus();
+  document.getElementById("taskDueDate").value = todayString();
+  document.getElementById("taskStatus").value = "active";
+  createDialog.close();
 }
 
-function updateTask(id, updates) {
+async function addQuickTask(event) {
+  event.preventDefault();
+  const titleInput = document.getElementById("quickAddTitleInput");
+  const title = titleInput.value.trim();
+  if (!title) return;
+
+  await createTask({
+    title,
+    description: document.getElementById("quickAddDescription").value.trim(),
+    domain: "Other",
+    impact: Number(document.getElementById("quickAddImpact").value),
+    dueDate: document.getElementById("quickAddDueDate").value || todayString(),
+    status: "active",
+  });
+
+  quickAddForm.reset();
+  document.getElementById("quickAddDueDate").value = todayString();
+}
+
+function openEditDialog(id) {
   const task = appState.tasks.find((entry) => entry.id === id);
-  if (!task) {
-    return;
-  }
-
-  Object.assign(task, updates);
-  saveState();
-  render();
+  if (!task) return;
+  document.getElementById("editTaskId").value = task.id;
+  document.getElementById("editTaskTitle").value = task.title;
+  document.getElementById("editTaskDescription").value = task.description || "";
+  document.getElementById("editTaskDomain").value = task.domain;
+  document.getElementById("editTaskImpact").value = String(task.impact);
+  document.getElementById("editTaskDueDate").value = task.dueDate || todayString();
+  document.getElementById("editTaskStatus").value = task.status;
+  editDialog.showModal();
 }
 
-function handleActionClick(event) {
+async function handleActionClick(event) {
   const button = event.target.closest("[data-action]");
-  if (!button) {
-    return;
-  }
-
+  if (!button) return;
   const { action, id } = button.dataset;
+  const taskId = Number(id);
+  if (action === "done") await patchTask(taskId, { status: "done" });
+  if (action === "park") await patchTask(taskId, { status: "parked" });
+  if (action === "activate") await patchTask(taskId, { status: "active" });
+  if (action === "edit") openEditDialog(taskId);
+}
 
-  if (action === "done") {
-    updateTask(id, { status: "done", completedAt: Date.now() });
-    return;
+function showTooltip(event, text) {
+  tooltip.textContent = text;
+  tooltip.classList.add("visible");
+  const rect = event.currentTarget.getBoundingClientRect();
+  tooltip.style.left = `${Math.max(16, rect.left + window.scrollX - 110)}px`;
+  tooltip.style.top = `${rect.bottom + window.scrollY + 10}px`;
+}
+
+function hideTooltip() {
+  tooltip.classList.remove("visible");
+}
+
+function reorderSections(sourceId, targetId) {
+  if (!sourceId || !targetId || sourceId === targetId) return;
+  const order = sanitizeSectionOrder(appState.settings.sectionOrder);
+  const sourceIndex = order.indexOf(sourceId);
+  const targetIndex = order.indexOf(targetId);
+  if (sourceIndex === -1 || targetIndex === -1) return;
+  const [moved] = order.splice(sourceIndex, 1);
+  order.splice(targetIndex, 0, moved);
+  appState.settings.sectionOrder = order;
+  saveState();
+  renderSectionOrder();
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+setupForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const username = document.getElementById("setupUsername").value.trim();
+  const password = document.getElementById("setupPassword").value;
+  if (!username || !password) return showAuthError("authErrorRequired");
+  if (password.length < 8) return showAuthError("authErrorShortPassword");
+
+  try {
+    const data = await api("/api/setup", {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+    });
+    setAuthenticatedState(data.user);
+    await refreshTasks();
+  } catch (error) {
+    showAuthError(error.code === "setup_already_completed" ? "authErrorSetupDone" : "authErrorDefault");
+    showAuthMode("login");
   }
+});
 
-  if (action === "park") {
-    updateTask(id, { status: "parked" });
-    return;
+loginForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const username = document.getElementById("loginUsername").value.trim();
+  const password = document.getElementById("loginPassword").value;
+  if (!username || !password) return showAuthError("authErrorRequired");
+
+  try {
+    const data = await api("/api/login", {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+    });
+    setAuthenticatedState(data.user);
+    await refreshTasks();
+  } catch {
+    showAuthError("authErrorInvalid");
   }
+});
 
-  if (action === "activate") {
-    updateTask(id, { status: "active", type: "task", urgency: 2 });
-    return;
+logoutButton.addEventListener("click", async () => {
+  try {
+    await api("/api/logout", { method: "POST" });
+  } finally {
+    currentUser = null;
+    appState.tasks = [];
+    setAuthenticatedState(null);
+    showAuthMode("login");
   }
+});
 
-  if (action === "boost") {
-    const task = appState.tasks.find((entry) => entry.id === id);
-    if (!task) {
-      return;
-    }
+taskForm.addEventListener("submit", (event) => addTask(event).catch(() => {}));
+quickAddForm.addEventListener("submit", (event) => addQuickTask(event).catch(() => {}));
+topTasks.addEventListener("click", (event) => handleActionClick(event).catch(() => {}));
+allTasks.addEventListener("click", (event) => handleActionClick(event).catch(() => {}));
+parkedList.addEventListener("click", (event) => handleActionClick(event).catch(() => {}));
+doneList.addEventListener("click", (event) => handleActionClick(event).catch(() => {}));
 
-    task.urgency = Math.min(3, task.urgency + 1);
-    task.impact = Math.min(3, task.impact + (task.impact < 3 ? 1 : 0));
+document.getElementById("openCreateDialogButton").addEventListener("click", () => {
+  document.getElementById("taskDueDate").value = todayString();
+  createDialog.showModal();
+});
+document.getElementById("closeCreateDialog").addEventListener("click", () => createDialog.close());
+document.getElementById("closeCreateDialogTop").addEventListener("click", () => createDialog.close());
+createDialog.addEventListener("click", (event) => {
+  const rect = createDialog.getBoundingClientRect();
+  const inside =
+    event.clientX >= rect.left &&
+    event.clientX <= rect.right &&
+    event.clientY >= rect.top &&
+    event.clientY <= rect.bottom;
+  if (!inside) {
+    createDialog.close();
+  }
+});
+
+document.getElementById("showAllTasksButton").addEventListener("click", () => {
+  showAllTasks = !showAllTasks;
+  renderTasks();
+});
+
+summaryGrid.addEventListener("click", (event) => {
+  const target = event.target.closest("[data-target]");
+  if (!target) return;
+  document.getElementById(target.dataset.target)?.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+document.querySelectorAll('input[name="dayMode"]').forEach((input) => {
+  input.addEventListener("change", () => {
+    appState.settings.dayMode = input.value;
     saveState();
     render();
-  }
-}
-
-function resetDay() {
-  appState.settings = structuredClone(defaultState.settings);
-  appState.tasks.forEach((task) => {
-    if (task.status === "done") {
-      task.status = "active";
-      task.completedAt = null;
-    }
   });
-  syncSettingsToInputs();
+});
+
+document.querySelectorAll("[data-done-filter]").forEach((button) => {
+  button.addEventListener("click", () => {
+    doneFilter = button.dataset.doneFilter;
+    document.querySelectorAll("[data-done-filter]").forEach((item) => item.classList.toggle("active", item === button));
+    renderDone();
+  });
+});
+
+document.getElementById("resetDayButton").addEventListener("click", () => {
+  appState.settings.dayMode = defaultState.settings.dayMode;
+  document.querySelector(`input[name="dayMode"][value="${appState.settings.dayMode}"]`).checked = true;
   saveState();
   render();
-}
+});
 
-taskForm.addEventListener("submit", addTask);
-taskList.addEventListener("click", handleActionClick);
-topThree.addEventListener("click", handleActionClick);
-ideaList.addEventListener("click", handleActionClick);
+document.getElementById("langDe").addEventListener("click", () => setLanguage("de"));
+document.getElementById("langEn").addEventListener("click", () => setLanguage("en"));
 
-document.querySelectorAll(".filter-button").forEach((button) => {
-  button.addEventListener("click", () => {
-    activeFilter = button.dataset.filter;
-    render();
+document.querySelectorAll("[data-tooltip-key]").forEach((button) => {
+  button.addEventListener("mouseenter", (event) => showTooltip(event, t(button.dataset.tooltipKey)));
+  button.addEventListener("focus", (event) => showTooltip(event, t(button.dataset.tooltipKey)));
+  button.addEventListener("mouseleave", hideTooltip);
+  button.addEventListener("blur", hideTooltip);
+});
+
+document.querySelectorAll("[data-drag-handle]").forEach((handle) => {
+  handle.addEventListener("dragstart", (event) => {
+    const section = event.currentTarget.closest("[data-section-id]");
+    if (!section) return;
+    draggedSectionId = section.dataset.sectionId;
+    section.classList.add("is-dragging");
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", draggedSectionId);
+  });
+
+  handle.addEventListener("dragend", (event) => {
+    draggedSectionId = null;
+    event.currentTarget.closest("[data-section-id]")?.classList.remove("is-dragging");
+    document.querySelectorAll(".drag-over").forEach((node) => node.classList.remove("drag-over"));
   });
 });
 
-Object.values(inputMap).forEach((input) => {
-  input.addEventListener("change", updateSettings);
+document.querySelectorAll(".reorderable-section").forEach((section) => {
+  section.addEventListener("dragover", (event) => {
+    if (!draggedSectionId) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    document.querySelectorAll(".drag-over").forEach((node) => {
+      if (node !== section) node.classList.remove("drag-over");
+    });
+    section.classList.add("drag-over");
+  });
+
+  section.addEventListener("dragleave", () => {
+    section.classList.remove("drag-over");
+  });
+
+  section.addEventListener("drop", (event) => {
+    event.preventDefault();
+    section.classList.remove("drag-over");
+    reorderSections(draggedSectionId, section.dataset.sectionId);
+  });
 });
 
-resetDayButton.addEventListener("click", resetDay);
+editForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const taskId = Number(document.getElementById("editTaskId").value);
+  await patchTask(taskId, {
+    title: document.getElementById("editTaskTitle").value.trim(),
+    description: document.getElementById("editTaskDescription").value.trim(),
+    domain: document.getElementById("editTaskDomain").value,
+    impact: Number(document.getElementById("editTaskImpact").value),
+    dueDate: document.getElementById("editTaskDueDate").value || todayString(),
+    status: statusFromValue(document.getElementById("editTaskStatus").value),
+  });
+  editDialog.close();
+});
 
-syncSettingsToInputs();
-render();
+document.getElementById("closeEditDialog").addEventListener("click", () => editDialog.close());
+
+document.querySelector(`input[name="dayMode"][value="${appState.settings.dayMode}"]`).checked = true;
+document.getElementById("taskDueDate").value = todayString();
+document.getElementById("taskStatus").value = "active";
+document.getElementById("quickAddDueDate").value = todayString();
+applyTranslations();
+renderSectionOrder();
+setAuthenticatedState(null);
+bootstrapSession();

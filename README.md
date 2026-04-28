@@ -1,32 +1,55 @@
-# Klarraum
+# Mindfog
 
-Eine kleine ADHS-freundliche Web-App für Priorisierung, mentale Entlastung und
-einen realistischen Tagesfokus.
+Eine kleine Web-App fuer Task-Priorisierung, mentale Entlastung und einen
+realistischen Tagesfokus. Die App laeuft jetzt als kleine Node.js-Anwendung
+mit Login, Session-Handling und SQLite-Datenbank.
 
 ## Was die App kann
 
-1. Gedanken, Aufgaben, Ideen und offene Schleifen schnell erfassen.
-2. Aufgaben nach Tagesenergie, Fokus, verfügbarer Zeit und Start-Hürde bewerten.
+1. Tasks schnell erfassen, ohne zu viele Felder ausfüllen zu müssen.
+2. Tasks anhand von Energie, Fokus und Tagesmodus priorisieren.
 3. Automatisch eine Top-3 für heute bilden.
-4. Für die wichtigste Aufgabe einen Mini-Schritt anzeigen.
-5. Ideen parken, ohne sie zu verlieren.
-6. Erledigte Aufgaben sichtbar machen.
-7. Alles lokal im Browser speichern.
+4. Punkte für erledigte Tasks sammeln.
+5. Ideen separat parken und später aktivieren.
+6. Erledigte Tasks über mehrere Zeiträume anzeigen.
+7. Zwischen Deutsch und Englisch umschalten.
+8. Tasks serverseitig in SQLite speichern und pro Benutzer trennen.
 
 ## V1-Prinzipien
 
 - Nicht alles gleichzeitig lösen, sondern Überforderung reduzieren.
 - Gute Ideen schützen, ohne den Tag kapern zu lassen.
-- Einstieg wichtiger nehmen als perfekte Planung.
-- Berufliche und private Themen in einem System sichtbar machen.
+- Reibung beim Erfassen bewusst klein halten.
+- Motivation durch sichtbare Scorepunkte verstaerken.
 
 ## Dateien
 
 - `index.html`: Struktur der App
 - `styles.css`: Layout und visuelle Sprache
-- `app.js`: Zustand, Priorisierungslogik und Interaktionen
+- `app.js`: Frontend-Zustand, Login-Flow und API-Anbindung
+- `server.js`: Express-Server, Login, Sessions und SQLite
+- `package.json`: Node-Skripte und Abhaengigkeiten
 
 ## Nutzung
 
-Die Datei `index.html` im Browser öffnen. Die Daten werden über `localStorage`
-lokal im Browser gespeichert.
+Die App wird ueber einen lokalen Node-Server gestartet. Beim ersten Start
+kannst du direkt den ersten Benutzer anlegen. Danach sind Login und
+benutzerbezogene Tasks aktiv.
+
+## Lokaler Workflow
+
+Lokale Vorschau starten:
+
+```bash
+./start-local.sh
+```
+
+Danach ist die App unter `http://localhost:4173` erreichbar.
+
+Änderungen mit einem Befehl veröffentlichen:
+
+```bash
+./publish.sh "Kurze Beschreibung der Aenderung"
+```
+
+Das Skript fuehrt `git add .`, `git commit` und `git push` aus.

@@ -3,257 +3,338 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Klarraum</title>
+    <title>Mindfog</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="ambient ambient-left"></div>
-    <div class="ambient ambient-right"></div>
-
-    <header class="hero">
-      <div class="hero-copy">
-        <p class="eyebrow">ADHS-freundliche Priorisierung</p>
-        <h1>Klarraum</h1>
-        <p class="intro">
-          Eine kleine Tagessteuerung für Momente, in denen zu viele Aufgaben,
-          Ideen und offene Schleifen gleichzeitig im Kopf sind.
-        </p>
-        <div class="hero-points">
-          <span>Gedanken entladen</span>
-          <span>Top-3 wählen lassen</span>
-          <span>Mit Mini-Schritten starten</span>
-        </div>
-      </div>
-
-      <section class="status-panel">
-        <div class="panel-head">
-          <div>
-            <p class="step">Tageskontext</p>
-            <h2>Wie sieht dein Tag gerade aus?</h2>
+    <div class="app-shell">
+      <section class="auth-shell hidden-auth" id="authShell">
+        <div class="auth-card surface">
+          <div class="auth-copy">
+            <h2 data-i18n="authTitle">Bei Mindfog anmelden</h2>
+            <p data-i18n="authIntro">
+              Melde dich an, damit deine Tasks sicher gespeichert und auf allen Geräten verfügbar sind.
+            </p>
           </div>
-          <button id="resetDayButton" class="ghost-button" type="button">
-            Tag zurücksetzen
+
+          <form id="setupForm" class="task-form hidden-auth">
+            <div class="section-head">
+              <h3 data-i18n="setupTitle">Ersten Account erstellen</h3>
+            </div>
+            <label class="field">
+              <span data-i18n="usernameLabel">Benutzername</span>
+              <input id="setupUsername" type="text" autocomplete="username" />
+            </label>
+            <label class="field">
+              <span data-i18n="passwordLabel">Passwort</span>
+              <input id="setupPassword" type="password" autocomplete="new-password" />
+            </label>
+            <p class="auth-hint" data-i18n="setupHint">Nutze mindestens 8 Zeichen. Dies ist dein erster Mindfog-Account.</p>
+            <button type="submit" class="primary-button" data-i18n="setupButton">Account erstellen</button>
+          </form>
+
+          <form id="loginForm" class="task-form hidden-auth">
+            <div class="section-head">
+              <h3 data-i18n="loginTitle">Anmelden</h3>
+            </div>
+            <label class="field">
+              <span data-i18n="usernameLabel">Benutzername</span>
+              <input id="loginUsername" type="text" autocomplete="username" />
+            </label>
+            <label class="field">
+              <span data-i18n="passwordLabel">Passwort</span>
+              <input id="loginPassword" type="password" autocomplete="current-password" />
+            </label>
+            <button type="submit" class="primary-button" data-i18n="loginButton">Einloggen</button>
+          </form>
+
+          <p class="auth-error" id="authError"></p>
+        </div>
+      </section>
+
+      <header class="topbar">
+        <div class="brand-block">
+          <div>
+            <h1>Mindfog</h1>
+            <p class="intro" data-i18n="heroIntro">
+              Capture tasks quickly, see what matters today, and turn priority into momentum.
+            </p>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <button class="text-button hidden-auth" id="logoutButton" type="button" data-i18n="logoutButton">Logout</button>
+          <button class="icon-button" id="scoreInfoButton" type="button" data-tooltip-key="scoreInfo" aria-label="Score info">
+            ?
           </button>
+          <div class="language-switch" role="group" aria-label="Language">
+            <button class="lang-button active" id="langDe" type="button">DE</button>
+            <button class="lang-button" id="langEn" type="button">EN</button>
+          </div>
         </div>
-        <p>
-          Diese Angaben beeinflussen die Priorisierung. Die App soll nur Dinge
-          nach oben holen, die heute wirklich machbar sind.
-        </p>
-        <div class="status-grid">
-          <label>
-            Energie
-            <select id="energyLevel">
-              <option value="1">Niedrig</option>
-              <option value="2" selected>Mittel</option>
-              <option value="3">Hoch</option>
-            </select>
-          </label>
-          <label>
-            Fokus
-            <select id="focusState">
-              <option value="1">Zerstreut</option>
-              <option value="2" selected>Okay</option>
-              <option value="3">Klar</option>
-            </select>
-          </label>
-          <label>
-            Verfügbare Zeit
-            <select id="timeWindow">
-              <option value="20">20 Min</option>
-              <option value="45" selected>45 Min</option>
-              <option value="90">90 Min</option>
-              <option value="180">3 Std</option>
-            </select>
-          </label>
-          <label>
-            Modus
-            <select id="dayMode">
-              <option value="stabil" selected>Stabiler Tag</option>
-              <option value="chaos">Überforderter Tag</option>
-              <option value="catchup">Aufholen</option>
-            </select>
-          </label>
-        </div>
-      </section>
-    </header>
+      </header>
 
-    <main class="layout">
-      <section class="card input-card">
-        <div class="card-head">
-          <p class="step">1. Kopf leeren</p>
-          <h2>Inbox für Aufgaben und Ideen</h2>
-        </div>
-        <p class="card-copy">
-          Schreib es erst raus. Die Sortierung kommt danach.
-        </p>
+      <main class="main-grid" id="mainGrid">
+        <section class="surface dashboard-card reorderable-section" id="dashboardSection" data-section-id="dashboardSection">
+          <div class="section-head">
+            <h2 data-i18n="dashboardTitle">Dashboard</h2>
+            <div class="section-tools">
+              <button class="drag-handle" type="button" draggable="true" data-drag-handle aria-label="Move section">⋮⋮</button>
+              <button id="resetDayButton" class="tonal-button" type="button" data-i18n="resetDay">
+                Tag zurücksetzen
+              </button>
+            </div>
+          </div>
+          <div class="metric-grid compact-metrics" id="summaryGrid"></div>
+          <div class="metric-grid score-grid" id="pointsGrid"></div>
+          <div class="support-note" id="supportNote"></div>
+        </section>
 
-        <form id="taskForm" class="task-form">
-          <label>
-            Was beschäftigt dich gerade?
-            <textarea
-              id="taskTitle"
-              name="title"
-              rows="3"
-              placeholder="z. B. Offerte fertig machen, Mutter zurückrufen, neue Produktidee kurz festhalten"
-              required
-            ></textarea>
+        <section class="surface context-card reorderable-section" id="contextSection" data-section-id="contextSection">
+          <div class="section-head">
+            <h2 data-i18n="contextTitle">Arbeitsmodus</h2>
+            <div class="section-tools">
+              <button class="drag-handle" type="button" draggable="true" data-drag-handle aria-label="Move section">⋮⋮</button>
+            </div>
+          </div>
+          <p class="section-copy" data-i18n="contextCopy">
+            Der Modus verändert nur die Reihenfolge deiner Tasks.
+          </p>
+          <section class="context-block">
+            <div class="context-title">
+              <div>
+                <strong data-i18n="modeLabel">Modus</strong>
+                <p data-i18n="modeHint">Welche Art von Sortierung brauchst du heute?</p>
+              </div>
+              <button class="icon-button" type="button" data-tooltip-key="modeInfo" aria-label="Mode info">?</button>
+            </div>
+            <div class="mode-grid" id="dayMode">
+              <label class="mode-card">
+                <input type="radio" name="dayMode" value="stabil" checked />
+                <div>
+                  <strong data-i18n="modeStable">Stabiler Tag</strong>
+                  <p data-i18n="modeStableDesc">Tasks nach Fälligkeit anzeigen, älteste zuerst</p>
+                </div>
+              </label>
+              <label class="mode-card">
+                <input type="radio" name="dayMode" value="catchup" />
+                <div>
+                  <strong data-i18n="modeCatchup">Aufholen</strong>
+                  <p data-i18n="modeCatchupDesc">Überfällige und fällige Tasks zuerst anzeigen</p>
+                </div>
+              </label>
+              <label class="mode-card">
+                <input type="radio" name="dayMode" value="chaos" />
+                <div>
+                  <strong data-i18n="modeChaos">Überforderter Tag</strong>
+                  <p data-i18n="modeChaosDesc">Einfachere Tasks zuerst, ohne Fälligkeiten zu verlieren</p>
+                </div>
+              </label>
+            </div>
+          </section>
+        </section>
+
+        <section class="surface tasks-card reorderable-section" id="tasksSection" data-section-id="tasksSection">
+          <div class="section-head">
+            <h2 data-i18n="tasksTitle">Tasks</h2>
+            <div class="section-tools">
+              <button class="drag-handle" type="button" draggable="true" data-drag-handle aria-label="Move section">⋮⋮</button>
+            </div>
+          </div>
+          <p class="section-copy" data-i18n="tasksCopy">
+            Die wichtigsten Tasks stehen oben. Alles Weitere bleibt direkt darunter erreichbar.
+          </p>
+          <div class="subsection-title" data-i18n="dueTodayTitle">Due today</div>
+          <div id="topTasks" class="task-stack"></div>
+          <div class="list-footer">
+            <button id="showAllTasksButton" class="text-button" type="button" data-i18n="showAllTasks">
+              Alle Tasks ansehen
+            </button>
+          </div>
+          <div id="allTasks" class="task-stack hidden-list"></div>
+        </section>
+
+        <section class="surface parked-card reorderable-section" id="parkedSection" data-section-id="parkedSection">
+          <div class="section-head">
+            <h2 data-i18n="parkedTitle">Geparkte Tasks</h2>
+            <div class="section-tools">
+              <button class="drag-handle" type="button" draggable="true" data-drag-handle aria-label="Move section">⋮⋮</button>
+            </div>
+          </div>
+          <div id="parkedList" class="task-stack"></div>
+        </section>
+
+        <section class="surface quick-add-card reorderable-section" id="quickAddSection" data-section-id="quickAddSection">
+          <div class="section-head">
+            <h2 data-i18n="quickAddTitle">Task hinzufügen</h2>
+            <div class="section-tools">
+              <button class="drag-handle" type="button" draggable="true" data-drag-handle aria-label="Move section">⋮⋮</button>
+            </div>
+          </div>
+          <p class="section-copy" data-i18n="quickAddCopy">
+            Erfasse schnell einen neuen Task direkt auf dem Board.
+          </p>
+          <form id="quickAddForm" class="task-form">
+            <label class="field">
+              <span data-i18n="capturePrompt">Was ist gerade in deinem Kopf?</span>
+              <input id="quickAddTitleInput" type="text" />
+            </label>
+            <label class="field">
+              <span data-i18n="descriptionLabel">Beschreibung</span>
+              <textarea id="quickAddDescription" rows="3"></textarea>
+            </label>
+            <div class="form-grid">
+              <label class="field">
+                <span data-i18n="dueDateLabel">Fällig bis</span>
+                <input id="quickAddDueDate" type="date" />
+              </label>
+              <label class="field">
+                <span data-i18n="priorityLabel">Priorität</span>
+                <select id="quickAddImpact">
+                  <option value="1" data-i18n="levelLow">Niedrig</option>
+                  <option value="2" selected data-i18n="levelMedium">Mittel</option>
+                  <option value="3" data-i18n="levelHigh">Hoch</option>
+                </select>
+              </label>
+            </div>
+            <button type="submit" class="primary-button" data-i18n="addButton">Hinzufügen</button>
+          </form>
+        </section>
+
+        <section class="surface done-card section-full reorderable-section" id="doneSection" data-section-id="doneSection">
+          <div class="section-head">
+            <h2 data-i18n="doneTitle">Erledigt</h2>
+            <div class="section-tools">
+              <button class="drag-handle" type="button" draggable="true" data-drag-handle aria-label="Move section">⋮⋮</button>
+            </div>
+          </div>
+          <div class="chip-row">
+            <button class="filter-button active" data-done-filter="all" type="button" data-i18n="doneAll">Gesamt</button>
+            <button class="filter-button" data-done-filter="today" type="button" data-i18n="doneToday">Heute</button>
+            <button class="filter-button" data-done-filter="week" type="button" data-i18n="doneWeek">Diese Woche</button>
+          </div>
+          <div id="doneList" class="task-stack"></div>
+        </section>
+
+        <section class="score-explainer" id="scoreExplainer">
+          <p data-i18n="scoreExplainer">
+            Der Score ergibt sich aus Priorität und Fälligkeit. Höhere Priorität erhöht den Score deutlich, nahe oder überfällige Tasks bekommen zusätzliche Punkte.
+          </p>
+        </section>
+      </main>
+
+      <button id="openCreateDialogButton" class="fab" type="button" aria-label="Task erstellen">+</button>
+
+      <dialog id="createDialog" class="edit-dialog">
+        <form id="taskForm" method="dialog" class="edit-form surface">
+          <div class="section-head">
+            <h3 data-i18n="createTitle">Task erstellen</h3>
+            <button class="close-dialog-button" type="button" id="closeCreateDialogTop" aria-label="Close">×</button>
+          </div>
+          <label class="field">
+            <span data-i18n="capturePrompt">Was ist gerade in deinem Kopf?</span>
+            <textarea id="taskTitle" rows="3" required></textarea>
           </label>
-
+          <label class="field">
+            <span data-i18n="descriptionLabel">Beschreibung</span>
+            <textarea id="taskDescription" rows="3"></textarea>
+          </label>
           <div class="form-grid">
-            <label>
-              Bereich
-              <select id="taskDomain" name="domain">
-                <option value="Arbeit">Arbeit</option>
-                <option value="Privat">Privat</option>
-                <option value="Idee">Idee</option>
+            <label class="field">
+              <span data-i18n="domainLabel">Bereich</span>
+              <select id="taskDomain">
+                <option value="Work" data-i18n="domainWork">Arbeit</option>
+                <option value="Personal" data-i18n="domainPersonal">Privat</option>
+                <option value="Other" data-i18n="domainOther">Sonstiges</option>
               </select>
             </label>
-            <label>
-              Typ
-              <select id="taskType" name="type">
-                <option value="task">Aufgabe</option>
-                <option value="idea">Idee</option>
-                <option value="worry">Offene Schleife</option>
+            <label class="field">
+              <span data-i18n="priorityLabel">Priorität</span>
+              <select id="taskImpact">
+                <option value="1" data-i18n="levelLow">Niedrig</option>
+                <option value="2" selected data-i18n="levelMedium">Mittel</option>
+                <option value="3" data-i18n="levelHigh">Hoch</option>
               </select>
             </label>
-            <label>
-              Wichtigkeit
-              <select id="taskImpact" name="impact">
-                <option value="1">Niedrig</option>
-                <option value="2" selected>Mittel</option>
-                <option value="3">Hoch</option>
-              </select>
+            <label class="field">
+              <span data-i18n="dueDateLabel">Fällig bis</span>
+              <input id="taskDueDate" type="date" />
             </label>
-            <label>
-              Dringlichkeit
-              <select id="taskUrgency" name="urgency">
-                <option value="1">Später</option>
-                <option value="2" selected>Bald</option>
-                <option value="3">Heute</option>
-              </select>
-            </label>
-            <label>
-              Aufwand
-              <select id="taskEffort" name="effort">
-                <option value="10">10 Min</option>
-                <option value="15">15 Min</option>
-                <option value="30" selected>30 Min</option>
-                <option value="60">1 Std</option>
-                <option value="120">2 Std</option>
-              </select>
-            </label>
-            <label>
-              Start-Hürde
-              <select id="taskFriction" name="friction">
-                <option value="1">Leicht</option>
-                <option value="2" selected>Mittel</option>
-                <option value="3">Blockierend</option>
+            <label class="field">
+              <span data-i18n="statusLabel">Status</span>
+              <select id="taskStatus">
+                <option value="active" data-i18n="statusOpen">Offen</option>
+                <option value="parked" data-i18n="statusPark">Parken</option>
+                <option value="done" data-i18n="statusDone">Erledigt</option>
               </select>
             </label>
           </div>
-
-          <label>
-            Nächster Mini-Schritt
-            <input
-              id="taskNextStep"
-              name="nextStep"
-              type="text"
-              placeholder="z. B. Mail öffnen und Betreff schreiben"
-            />
-          </label>
-
-          <button type="submit">In Klarraum übernehmen</button>
+          <div class="dialog-actions dialog-spacing">
+            <button class="tonal-button" type="button" id="closeCreateDialog" data-i18n="cancelButton">Abbrechen</button>
+            <button type="submit" class="primary-button" data-i18n="addButton">Hinzufügen</button>
+          </div>
         </form>
-      </section>
+      </dialog>
 
-      <section class="card summary-card">
-        <div class="card-head">
-          <p class="step">2. Überblick</p>
-          <h2>Was heute los ist</h2>
-        </div>
-        <div class="summary-grid" id="summaryGrid"></div>
-        <div class="support-note" id="supportNote"></div>
-      </section>
-
-      <section class="card focus-card">
-        <div class="card-head">
-          <p class="step">3. Heute zählt nur das</p>
-          <h2>Deine fokussierten 3</h2>
-        </div>
-        <div id="topThree" class="top-three"></div>
-      </section>
-
-      <section class="card starter-card">
-        <div class="card-head">
-          <p class="step">4. Einstieg</p>
-          <h2>Nächster machbarer Schritt</h2>
-        </div>
-        <div id="focusAction" class="focus-action"></div>
-      </section>
-
-      <section class="card queue-card">
-        <div class="card-head">
-          <p class="step">5. Aufgabenliste</p>
-          <h2>Aktive Aufgaben</h2>
-        </div>
-        <div class="toolbar">
-          <div class="filter-pills">
-            <button class="filter-button active" data-filter="all" type="button">
-              Alle
-            </button>
-            <button class="filter-button" data-filter="Arbeit" type="button">
-              Arbeit
-            </button>
-            <button class="filter-button" data-filter="Privat" type="button">
-              Privat
-            </button>
-            <button class="filter-button" data-filter="Idee" type="button">
-              Ideen
-            </button>
+      <dialog id="editDialog" class="edit-dialog">
+        <form id="editForm" method="dialog" class="edit-form surface">
+          <div class="section-head">
+            <h3 data-i18n="editTitle">Task bearbeiten</h3>
           </div>
-        </div>
-        <div id="taskList" class="task-list"></div>
-      </section>
-
-      <section class="card parking-card">
-        <div class="card-head">
-          <p class="step">6. Entlastung</p>
-          <h2>Geparkte Ideen und erledigte Dinge</h2>
-        </div>
-        <div class="parking-layout">
-          <div>
-            <h3>Ideen-Parkplatz</h3>
-            <div id="ideaList" class="stack-list"></div>
+          <input id="editTaskId" type="hidden" />
+          <label class="field">
+            <span data-i18n="capturePrompt">Was ist gerade in deinem Kopf?</span>
+            <textarea id="editTaskTitle" rows="3" required></textarea>
+          </label>
+          <label class="field">
+            <span data-i18n="descriptionLabel">Beschreibung</span>
+            <textarea id="editTaskDescription" rows="3"></textarea>
+          </label>
+          <div class="form-grid">
+            <label class="field">
+              <span data-i18n="domainLabel">Bereich</span>
+              <select id="editTaskDomain">
+                <option value="Work" data-i18n="domainWork">Arbeit</option>
+                <option value="Personal" data-i18n="domainPersonal">Privat</option>
+                <option value="Other" data-i18n="domainOther">Sonstiges</option>
+              </select>
+            </label>
+            <label class="field">
+              <span data-i18n="priorityLabel">Priorität</span>
+              <select id="editTaskImpact">
+                <option value="1" data-i18n="levelLow">Niedrig</option>
+                <option value="2" data-i18n="levelMedium">Mittel</option>
+                <option value="3" data-i18n="levelHigh">Hoch</option>
+              </select>
+            </label>
+            <label class="field">
+              <span data-i18n="dueDateLabel">Fällig bis</span>
+              <input id="editTaskDueDate" type="date" />
+            </label>
+            <label class="field">
+              <span data-i18n="statusLabel">Status</span>
+              <select id="editTaskStatus">
+                <option value="active" data-i18n="statusOpen">Offen</option>
+                <option value="parked" data-i18n="statusPark">Parken</option>
+                <option value="done" data-i18n="statusDone">Erledigt</option>
+              </select>
+            </label>
           </div>
-          <div>
-            <h3>Erledigt heute</h3>
-            <div id="doneList" class="stack-list"></div>
+          <div class="dialog-actions dialog-spacing">
+            <button class="tonal-button" type="button" id="closeEditDialog" data-i18n="cancelButton">Abbrechen</button>
+            <button type="submit" class="primary-button" data-i18n="saveButton">Speichern</button>
           </div>
-        </div>
-      </section>
-    </main>
+        </form>
+      </dialog>
 
-    <section class="principles">
-      <div class="principle">
-        <h3>Weniger Entscheidungen</h3>
-        <p>Die App sortiert vor, damit du nicht dauernd neu priorisieren musst.</p>
-      </div>
-      <div class="principle">
-        <h3>Gute Ideen bleiben sicher</h3>
-        <p>Ideen werden nicht vergessen, aber sie dominieren auch nicht deinen Tag.</p>
-      </div>
-      <div class="principle">
-        <h3>Starten statt perfekt planen</h3>
-        <p>Jede Aufgabe bekommt einen Mini-Schritt, damit der Einstieg kleiner wird.</p>
-      </div>
-    </section>
-
+      <div class="tooltip" id="tooltip"></div>
+    </div>
     <script src="./app.js"></script>
   </body>
 </html>
